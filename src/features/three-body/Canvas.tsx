@@ -3,14 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { emit, on } from '@/lib/events';
 import { prefersReducedMotion, watchReducedMotion } from '@/lib/motion';
-import { readPalette } from '@/lib/palette';
+import { asset } from '@/lib/asset';
+import { readPalette, readTokens } from '@/lib/palette';
 import { bufferSize } from './buffer';
-import { Lab, type LabMessage, type LabOutput } from './lab';
+import { ENGINE_PALETTE, MAX_PIXELS } from './engine-layout';
+import type { LabMessage, LabOutput } from './lab';
+import { startLab, type LabInit } from './start';
 import type { WorkerInit } from './worker';
+
+/** The default seed; ?seed=N in the URL replays a specific run. */
+const DEFAULT_SEED = 318;
+
+function seedFromUrl(): number {
+  const n = Number(new URLSearchParams(window.location.search).get('seed'));
+  return Number.isInteger(n) && n > 0 && n < 2 ** 32 ? n : DEFAULT_SEED;
+}
 
 /**
  * Layer 0: the three-body background. Prefers a Web Worker drawing on an OffscreenCanvas;
- * falls back to running the same Lab on the main thread.
+ * falls back to the main thread. Either way it runs the Go/WASM engine when engine.wasm
+ * loads, and the TypeScript solver when it doesn't.
  */
 export default function ThreeBodyCanvas() {
   const ref = useRef<HTMLDivElement>(null);
@@ -26,19 +38,31 @@ export default function ThreeBodyCanvas() {
     host.appendChild(canvas);
 
     const onOutput = (out: LabOutput) => {
-      if (out.type === 'ready') emit('threebody:ready', { presets: out.presets });
-      else emit('threebody:telemetry', out.telemetry);
+      if (out.type === 'ready')
+        emit('threebody:ready', { presets: out.presets, engine: out.engine });
+      else if (out.type === 'telemetry') emit('threebody:telemetry', out.telemetry);
+      else if (out.type === 'event')
+        emit('threebody:event', { kind: out.kind, message: out.message });
+      else emit('core:critical', { critical: out.critical });
     };
 
     const size = () => {
-      const b = bufferSize(window.innerWidth, window.innerHeight);
+      const b = bufferSize(window.innerWidth, window.innerHeight, 480, MAX_PIXELS);
       canvas.style.width = `${b.width * b.scale}px`;
       canvas.style.height = `${b.height * b.scale}px`;
       return b;
     };
     const initial = size();
-    const palette = readPalette();
-    const reduced = prefersReducedMotion();
+    const init: LabInit = {
+      palette: readPalette(),
+      colors: readTokens(ENGINE_PALETTE),
+      reduced: prefersReducedMotion(),
+      wasmUrl:
+        typeof WebAssembly === 'object'
+          ? new URL(asset('/engine.wasm'), window.location.href).href
+          : null,
+      seed: seedFromUrl(),
+    };
 
     let send: (msg: LabMessage) => void = () => {};
     let worker: Worker | null = null;
@@ -47,15 +71,14 @@ export default function ThreeBodyCanvas() {
       try {
         worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
         const offscreen = canvas.transferControlToOffscreen();
-        const init: WorkerInit = {
+        const msg: WorkerInit = {
+          ...init,
           type: 'init',
           canvas: offscreen,
           width: initial.width,
           height: initial.height,
-          palette,
-          reduced,
         };
-        worker.postMessage(init, [offscreen]);
+        worker.postMessage(msg, [offscreen]);
         worker.onmessage = (e: MessageEvent<LabOutput>) => onOutput(e.data);
         const w = worker;
         send = (msg) => w.postMessage(msg);
@@ -69,10 +92,7 @@ export default function ThreeBodyCanvas() {
       canvas.width = initial.width;
       canvas.height = initial.height;
       const ctx = canvas.getContext('2d', { alpha: false });
-      if (ctx) {
-        const lab = new Lab(ctx, palette, reduced, onOutput);
-        send = (msg) => lab.handle(msg);
-      }
+      if (ctx) send = startLab(ctx, init, onOutput);
     }
 
     let shooterActive = false;
@@ -91,6 +111,7 @@ export default function ThreeBodyCanvas() {
       on('threebody:preset', (d) => send({ type: 'preset', index: d.index })),
       on('threebody:kick', () => send({ type: 'kick' })),
       on('threebody:shadow', (d) => send({ type: 'shadow', on: d.on })),
+      on('threebody:age', () => send({ type: 'age' })),
       on('karl:opened', () => setDimmed(true)),
       on('karl:closed', () => setDimmed(false)),
       on('shooter:start', () => {

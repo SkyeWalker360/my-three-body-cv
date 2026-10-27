@@ -61,3 +61,9 @@ export function readRamp(name: RampName): string[] {
     style.getPropertyValue(`--color-${name}-${i}`).trim(),
   );
 }
+
+/** Read any theme colour tokens by name (without the --color- prefix). */
+export function readTokens(names: readonly string[]): string[] {
+  const style = getComputedStyle(document.documentElement);
+  return names.map((name) => style.getPropertyValue(`--color-${name}`).trim());
+}

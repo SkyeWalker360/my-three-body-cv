@@ -1,5 +1,5 @@
 import { PRESETS } from '@/features/three-body/presets';
-import { DT, G, SOFTENING } from '@/features/three-body/solver';
+import { G, SOFTENING } from '@/features/three-body/solver';
 import { LabControls } from './controls';
 
 export function LabPanel() {
@@ -19,10 +19,17 @@ export function LabPanel() {
       </header>
       <p className="max-w-3xl text-sm leading-relaxed">
         The background is a live simulation of three stars under Newtonian gravity (G = {G},
-        softening ε = {SOFTENING}), integrated with velocity Verlet at a fixed step of dt = {DT}.
-        Verlet is symplectic: energy wobbles inside a tight band instead of drifting away, so
-        periodic orbits like the figure-8 hold their shape. Turn on Shadow to run a copy nudged by
-        10⁻⁷ and watch chaos pull the two apart.
+        softening ε = {SOFTENING}). A small engine written in Go and compiled to WebAssembly
+        integrates it with a 4th-order Yoshida symplectic step and draws every frame in palette
+        colours at about 480×270. Symplectic means energy wobbles inside a tight band instead of
+        drifting away, so periodic orbits like the figure-8 hold their shape. If WebAssembly
+        isn&apos;t available, a TypeScript velocity Verlet solver takes over.
+      </p>
+      <p className="max-w-3xl text-sm leading-relaxed">
+        Each star&apos;s colour comes from its temperature. Turn on Shadow to run a copy nudged by
+        10⁻⁷ and watch chaos pull the two apart. Age a star to send it up the giant branch: the
+        blue-white giant ends in a supernova and a black hole, and the planet&apos;s climate follows
+        the light it receives.
       </p>
       <LabControls presets={PRESETS.map((p) => ({ name: p.name, short: p.short }))} />
     </section>

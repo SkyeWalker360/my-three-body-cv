@@ -85,3 +85,34 @@ other ramps.
 - **Build:** TinyGo `-target wasm-unknown -opt=z -gc=leaking -panic=trap`. Nothing allocates
   after start-up (tested), so the leaking GC is safe. Result: about 24 KB gzipped. CI checks the
   60 KB budget and that the WebAssembly and native builds draw byte-identical frames.
+
+## D8. Putting the engine on the site
+
+- **When the WASM loads.** The background is the lab, so "loads only when a visitor opens the
+  lab" became: the worker fetches `engine.wasm` after the page goes idle, together with the rest
+  of the background. It's off the main thread and outside the pre-interaction JS budget either
+  way. If WebAssembly or the file is missing, the TypeScript solver runs instead, and the lab
+  panel says which one is running.
+- **"Age a star"** is a new button in the lab panel (disabled on the TypeScript fallback, which
+  has no lifecycles). Engine events appear in a polite live region under the readouts, and a
+  second readout row shows each star's kind, phase and temperature, plus the planet's era,
+  civilisation time and city lights.
+- **Scanner.** Any star going critical (giant branch or supernova) turns K.A.R.L.'s scanner
+  amber and speeds its sweep from 1 s to 0.45 s. It listens to `core:critical` for an instant
+  switch and to telemetry so a terminal opened mid-event shows the right colour. The `/karr`
+  toggle still works.
+- **Core gauge.** It keeps the polytrope core, now with a white centre inside two hexagonal
+  containment rings. The pulse speeds up and deepens as the blue giant (K.A.R.L.'s host star)
+  climbs the giant branch, and the rings glow gold while critical.
+- **Shareable runs.** `?seed=N` in the URL replays a run; the default seed is 318.
+- **Lab panel copy** now describes the Go engine and Yoshida integrator. It's site copy, not a
+  CV fact, and the engine stays out of the manifest and CV until Luke adds it in his own words.
+
+## Phase 6 status
+
+Done: TinyGo build under budget with the CI check, go test (drift, momentum, byte-identical
+frames), Go/TypeScript parity, the worker with fallback (about 0.1 ms per frame in Node,
+against a 4 ms budget), stellar ramp and dithered sprites with no off-palette pixels, the black
+hole baked by `cmd/bake`, and the supernova turning the scanner amber.
+
+Not done: NDT inspection mode (D3).

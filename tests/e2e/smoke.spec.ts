@@ -131,3 +131,14 @@ test('the shooter can be replayed without reloading', async ({ page, isMobile })
     await expect(launch).toBeEnabled();
   }
 });
+
+test('the Go engine loads and a star can be aged into a supernova', async ({ page }) => {
+  test.setTimeout(30_000);
+  const wasm = page.waitForResponse((r) => r.url().endsWith('/engine.wasm'));
+  await page.goto('/');
+  expect((await wasm).status()).toBe(200);
+  await expect(page.getByText('Running the Go engine')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'AGE A STAR' }).click();
+  await expect(page.getByText(/left the main sequence/)).toBeVisible();
+  await expect(page.getByText(/Supernova!/)).toBeVisible({ timeout: 15_000 });
+});

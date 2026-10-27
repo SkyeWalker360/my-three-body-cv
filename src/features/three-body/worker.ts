@@ -1,13 +1,11 @@
-import type { Palette } from '@/lib/palette';
-import { Lab, type LabMessage, type LabOutput } from './lab';
+import type { LabMessage, LabOutput } from './lab';
+import { startLab, type LabInit } from './start';
 
-export type WorkerInit = {
+export type WorkerInit = LabInit & {
   type: 'init';
   canvas: OffscreenCanvas;
   width: number;
   height: number;
-  palette: Palette;
-  reduced: boolean;
 };
 
 // Typed by hand: the DOM and WebWorker libs can't both be loaded in one TypeScript program.
@@ -15,7 +13,7 @@ const scope = self as unknown as {
   onmessage: ((e: MessageEvent<WorkerInit | LabMessage>) => void) | null;
   postMessage: (msg: LabOutput) => void;
 };
-let lab: Lab | null = null;
+let send: ((msg: LabMessage) => void) | null = null;
 
 scope.onmessage = (e) => {
   const msg = e.data;
@@ -24,8 +22,8 @@ scope.onmessage = (e) => {
     msg.canvas.height = msg.height;
     const ctx = msg.canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
-    lab = new Lab(ctx, msg.palette, msg.reduced, (out) => scope.postMessage(out));
+    send = startLab(ctx, msg, (out) => scope.postMessage(out));
     return;
   }
-  lab?.handle(msg);
+  send?.(msg);
 };
