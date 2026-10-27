@@ -1,0 +1,52 @@
+/**
+ * Typed CustomEvent bus. Features talk to each other only through these events,
+ * so no feature imports another.
+ */
+export type PresetSummary = { index: number; name: string; short: string };
+
+export type Telemetry = {
+  kinetic: number;
+  potential: number;
+  total: number;
+  drift: number;
+  divergence: number | null;
+  preset: PresetSummary;
+};
+
+export type EventMap = {
+  'karl:open': { command?: string };
+  'karl:opened': undefined;
+  'karl:closed': undefined;
+  /** A request from the footer button; the shooter answers with shooter:start once running. */
+  'shooter:launch': undefined;
+  'shooter:start': undefined;
+  'shooter:end': { score: number; outcome: 'victory' | 'defeat' | 'quit' };
+  'motion:reduced': { reduced: boolean };
+  'threebody:preset': { index?: number };
+  'threebody:kick': undefined;
+  'threebody:shadow': { on: boolean };
+  'threebody:telemetry': Telemetry;
+  'threebody:ready': { presets: PresetSummary[] };
+};
+
+export type EventName = keyof EventMap;
+
+const PREFIX = 'mtbcv:';
+
+export function emit<K extends EventName>(
+  name: K,
+  ...detail: EventMap[K] extends undefined ? [] : [EventMap[K]]
+): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(PREFIX + name, { detail: detail[0] }));
+}
+
+export function on<K extends EventName>(
+  name: K,
+  handler: (detail: EventMap[K]) => void,
+): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const listener = (e: Event) => handler((e as CustomEvent<EventMap[K]>).detail);
+  window.addEventListener(PREFIX + name, listener);
+  return () => window.removeEventListener(PREFIX + name, listener);
+}

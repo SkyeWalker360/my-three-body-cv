@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luke Gorry | Space Pixel Art CV & Orbital Systems</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pixel Font Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Cosmic Retro Cyberpunk (Deep Space Void #0A0E1A, Neon Cyan #12B5CB, Core Red #FF1E1E, Stellar Gold #FFD93D, Phosphor Green #10B981, Nebula Violet #7C3AED) -->
+    <!-- Application Structure Plan: Designed as a multi-layered interactive Space CV application. Layer 0 is a real-time Velocity Verlet 3-Body orbital simulation canvas serving as the cosmic backdrop with telemetry HUD. Layer 1 is a clean, accessible Bento-grid CV layout with category filters and interactive metric cards, optimizing readability while retaining 16-bit retro styling. Layer 2 is a modal Glassmorphic Terminal running the K.A.R.L. co-pilot AI (with KITT Larson scanner and sub-Chandrasekhar fusion core gauge) and housing the 4-Act Noctus Umbra D&D text RPG. Layer 3 is an overlay canvas running the 16-angle spaceship cursor with particle exhaust and the footer space shooter engine which virtualizes DOM nodes into destructible CV asteroids, culminating in a secret Luke Gorry Face Boss battle. -->
+    <!-- Visualization & Content Choices: 1. Three-Body Simulation: Goal = Physics authenticity & background Easter egg -> 2D Canvas + Velocity Verlet numerical integration -> Interactive presets (Figure-Eight, Moth-I, etc.) and mass perturbation -> High performance non-blocking loop. 2. K.A.R.L. Larson Scanner & Core: Goal = KITT homage & dying-star lore -> 12-cell CSS keyframe scanner + Canvas radial hydrostatic equilibrium gauge -> Interactive CLI commands. 3. Noctus Umbra RPG: Goal = Interactive D&D campaign -> Branching JS choice engine + d20 skill check algorithm. 4. Footer Space Shooter: Goal = Interactive DOM destruction -> Canvas harvest of DOM bounding rects + Atari Asteroids fragmentation + 3-Phase Pixel Face Boss battle. Confirming NO SVG used and NO Mermaid JS used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        space: {
+                            bg: '#0A0E1A',
+                            panel: 'rgba(15, 23, 42, 0.85)',
+                            border: '#12B5CB',
+                            gold: '#FFD93D',
+                            red: '#FF1E1E',
+                            violet: '#7C3AED',
+                            green: '#10B981'
+                        }
+                    },
+                    fontFamily: {
+                        pixel: ['"Press Start 2P"', 'cursive'],
+                        terminal: ['VT323', 'monospace'],
+                        mono: ['"Space Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        body {
+            background-color: #0A0E1A;
+            color: #E2E8F0;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        /* Hide native cursor for fine pointers when ship cursor is active */
+        @media (pointer: fine) {
+            body.ship-cursor-active, body.ship-cursor-active a, body.ship-cursor-active button {
+                cursor: none !important;
+            }
+        }
+        .pixel-border {
+            box-shadow: 
+                -4px 0 0 0 #12B5CB,
+                4px 0 0 0 #12B5CB,
+                0 -4px 0 0 #12B5CB,
+                0 4px 0 0 #12B5CB;
+        }
+        .pixel-border-red {
+            box-shadow: 
+                -4px 0 0 0 #FF1E1E,
+                4px 0 0 0 #FF1E1E,
+                0 -4px 0 0 #FF1E1E,
+                0 4px 0 0 #FF1E1E;
+        }
+        .pixel-border-gold {
+            box-shadow: 
+                -4px 0 0 0 #FFD93D,
+                4px 0 0 0 #FFD93D,
+                0 -4px 0 0 #FFD93D,
+                0 4px 0 0 #FFD93D;
+        }
+        .crt-overlay::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 25;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+        /* Larson Scanner Animation */
+        .larson-cell {
+            background-color: #1a0505;
+            transition: background-color 0.05s ease-out;
+        }
+        .larson-active {
+            background-color: #FF1E1E;
+            box-shadow: 0 0 10px #FF1E1E, 0 0 20px #FF1E1E;
+        }
+        .larson-trail-1 { background-color: #cc0000; box-shadow: 0 0 5px #cc0000; }
+        .larson-trail-2 { background-color: #880000; }
+        .larson-trail-3 { background-color: #440000; }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 280px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 320px; }
+        }
+    </style>
+</head>
+<body class="ship-cursor-active font-mono min-h-screen relative selection:bg-cyan-500 selection:text-black">
+
+    <!-- LAYER 0: THREE-BODY GRAVITATIONAL SIMULATION CANVAS -->
+    <canvas id="threeBodyCanvas" class="fixed inset-0 z-0 pointer-events-none w-full h-full"></canvas>
+
+    <!-- LAYER 3: SHIP CURSOR & SHOOTER OVERLAY CANVAS -->
+    <canvas id="overlayCanvas" class="fixed inset-0 z-30 pointer-events-none w-full h-full"></canvas>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-20 backdrop-blur-md bg-space-bg/80 border-b border-cyan-500/30 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-cyan-500 text-black font-pixel text-xs flex items-center justify-center font-bold shadow-[2px_2px_0px_0px_#FFD93D]">LG</div>
+                <div>
+                    <h1 class="font-pixel text-sm md:text-base text-cyan-400 tracking-wider">LUKE GORRY</h1>
+                    <p class="text-xs text-gray-400 font-terminal">LEAD FULL-STACK DEV & NDT MT INSPECTOR [2026]</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 md:space-x-4 text-xs font-pixel">
+                <button id="btnToggleKarl" class="px-3 py-2 bg-red-950/80 hover:bg-red-900 border border-red-500 text-red-400 rounded flex items-center gap-2 transition-all active:translate-y-0.5">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span>K.A.R.L. AI</span>
+                </button>
+                <button id="btnPresetSelect" class="px-3 py-2 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500 text-cyan-400 rounded transition-all">
+                    3-BODY: <span id="lblPresetName" class="text-yellow-400">FIG-8</span>
+                </button>
+                <button id="btnPerturb" class="px-2 py-2 bg-purple-950/80 hover:bg-purple-900 border border-purple-500 text-purple-300 rounded text-[10px]" title="Apply delta kick chaos">
+                    ⚡ KICK
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER (LAYER 1) -->
+    <main class="relative z-10 max-w-7xl mx-auto px-4 py-8 space-y-12">
+
+        <!-- INTRO HERO SECTION -->
+        <section id="hero" class="bg-space-panel backdrop-blur-md border border-cyan-500/40 p-6 md:p-8 rounded-lg pixel-border relative overflow-hidden">
+            <div class="absolute top-2 right-2 text-[10px] font-pixel text-cyan-500/60">SECTOR: AVIONICS & INTEGRITY</div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="inline-block px-3 py-1 bg-cyan-500/10 border border-cyan-400 text-cyan-300 text-xs font-pixel">
+                        🚀 CAPTAIN'S LOG: 2018 — 2026 MISSION ARCHIVE
+                    </div>
+                    <h2 class="text-2xl md:text-4xl font-pixel text-yellow-400 leading-relaxed">
+                        FULL-STACK SOFTWARE ARCHITECT & SAFETY-CRITICAL NDT INSPECTOR
+                    </h2>
+                    <p class="text-sm md:text-base text-gray-300 leading-relaxed">
+                        Welcome aboard. I bridge the gap between high-level cloud applications, real-time physics algorithms, and physical non-destructive engineering. Over 3+ years as Lead Developer at GEN318 combined with Level 1 & Level 2 Magnetic Particle Testing (MT) certifications from the African NDT Centre.
+                    </p>
+                    <div class="flex flex-wrap gap-3 pt-2">
+                        <a href="#cv-manifest" class="px-4 py-2 bg-cyan-500 text-black font-pixel text-xs hover:bg-cyan-400 transition-colors">EXPLORE CV MANIFEST</a>
+                        <button onclick="openKarlWithCommand('/core')" class="px-4 py-2 bg-red-900/60 text-red-300 border border-red-500/50 font-pixel text-xs hover:bg-red-800/80 transition-colors">DIAGNOSE FUSION CORE</button>
+                        <button onclick="openKarlWithCommand('/noctus')" class="px-4 py-2 bg-purple-900/60 text-purple-300 border border-purple-500/50 font-pixel text-xs hover:bg-purple-800/80 transition-colors">PLAY D&D RPG</button>
+                    </div>
+                </div>
+
+                <!-- QUICK STATS DASHBOARD CARD -->
+                <div class="bg-slate-900/90 border border-cyan-500/30 p-4 rounded space-y-3 font-terminal text-sm">
+                    <div class="text-cyan-400 font-pixel text-xs border-b border-cyan-500/30 pb-2 flex justify-between">
+                        <span>SYSTEM DIAGNOSTICS</span>
+                        <span class="text-green-400">ONLINE</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Lead Tenure:</span>
+                        <span class="text-yellow-400 font-mono">GEN318 (3.3 Yrs)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">NDT Certification:</span>
+                        <span class="text-cyan-300 font-mono">MT Level 1 & 2 (2026)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Primary Core:</span>
+                        <span class="text-green-400 font-mono">TS / Go / C# / Flutter</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Home Lab:</span>
+                        <span class="text-purple-300 font-mono">Alpine & Zorin OS</span>
+                    </div>
+                    <div class="pt-2 border-t border-cyan-500/30">
+                        <div class="text-xs text-gray-400 mb-1">Orbit Gravitational Stability:</div>
+                        <div class="w-full bg-slate-800 h-2 rounded overflow-hidden">
+                            <div id="stabilityBar" class="bg-cyan-400 h-full w-[94%] transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- THREE-BODY SIMULATION CONTROLS & SCIENCE EXPLAINER -->
+        <section class="bg-space-panel backdrop-blur-md border border-purple-500/40 p-6 rounded-lg space-y-4">
+            <div class="flex flex-wrap justify-between items-center border-b border-purple-500/30 pb-3">
+                <h3 class="font-pixel text-sm md:text-base text-purple-300 flex items-center gap-2">
+                    <span>🌌 EASTER EGG #1: THREE-BODY GRAVITATIONAL LABORATORY</span>
+                </h3>
+                <span class="text-xs font-terminal text-gray-400">NEWTONIAN CHOREOGRAPHY + VELOCITY VERLET SOLVER</span>
+            </div>
+            <p class="text-xs md:text-sm text-gray-300">
+                The background canvas solves mutual gravitational forces for three point masses using double-precision Velocity Verlet symplectic integration ($G=1$, softening $\epsilon=0.001$). Unlike basic Euler solvers, this preserves Hamiltonian geometric phase space volume without monotonic energy drift.
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs font-pixel">
+                <button onclick="setOrbitPreset(0)" class="p-2 bg-slate-800 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950 rounded">FIGURE-8</button>
+                <button onclick="setOrbitPreset(1)" class="p-2 bg-slate-800 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950 rounded">LAGRANGE TRI</button>
+                <button onclick="setOrbitPreset(2)" class="p-2 bg-slate-800 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950 rounded">MOTH-I BRAID</button>
+                <button onclick="setOrbitPreset(3)" class="p-2 bg-slate-800 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950 rounded">TRISOLARAN CHAOS</button>
+            </div>
+            <!-- Dynamic Telemetry Display -->
+            <div id="simTelemetry" class="font-terminal text-xs text-cyan-400 bg-black/60 p-3 rounded grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div>Kinetic Energy: <span id="telemetryK" class="text-yellow-300">0.000</span></div>
+                <div>Potential Energy: <span id="telemetryU" class="text-yellow-300">0.000</span></div>
+                <div>Total Energy (E): <span id="telemetryE" class="text-green-300">0.000</span></div>
+                <div>Center Drift: <span id="telemetryDrift" class="text-purple-300">0.0000</span></div>
+            </div>
+        </section>
+
+        <!-- CV MANIFEST BENTO GRID SECTION -->
+        <section id="cv-manifest" class="space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h3 class="font-pixel text-xl text-yellow-400">CURRICULUM VITAE MANIFEST</h3>
+                    <p class="text-xs text-gray-400">ATS-PARSABLE & INTERACTIVE DESTRUCTIBLE DOM NODES</p>
+                </div>
+                <!-- Category Filter Buttons -->
+                <div class="flex flex-wrap gap-2 text-xs font-pixel" id="filterContainer">
+                    <button data-filter="all" class="btn-filter active px-3 py-1.5 bg-cyan-500 text-black">ALL SECTORS</button>
+                    <button data-filter="dev" class="btn-filter px-3 py-1.5 bg-slate-800 text-cyan-300 border border-cyan-500/40">SOFTWARE ENG</button>
+                    <button data-filter="ndt" class="btn-filter px-3 py-1.5 bg-slate-800 text-cyan-300 border border-cyan-500/40">NDT INSPECTION</button>
+                    <button data-filter="edu" class="btn-filter px-3 py-1.5 bg-slate-800 text-cyan-300 border border-cyan-500/40">EDUCATION</button>
+                </div>
+            </div>
+
+            <!-- Bento Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- EXPERIENCE CARD 1: GEN318 -->
+                <article data-category="dev" data-destructible="true" class="cv-card md:col-span-2 bg-space-panel backdrop-blur-md border border-cyan-500/40 p-6 rounded-lg pixel-border hover:border-cyan-400 transition-all">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-[10px] font-pixel">NOV 2022 — FEB 2026</span>
+                            <h4 class="font-pixel text-lg text-cyan-300 mt-1">LEAD DEVELOPER & SYSTEMS MANAGEMENT</h4>
+                            <h5 class="text-xs font-terminal text-yellow-400">GEN318 | JOHANNESBURG, SOUTH AFRICA</h5>
+                        </div>
+                        <span class="text-xs font-pixel text-green-400 bg-green-950/60 px-2 py-1 rounded border border-green-500/30">LEAD ROLE</span>
+                    </div>
+                    <ul class="text-xs space-y-2 text-gray-300 list-disc list-inside">
+                        <li>Directed full-stack web & mobile engineering initiatives, deploying Flutter and React Native cross-platform applications in JS/TS.</li>
+                        <li>Architected enterprise CRM platforms, managing automated SQL, MDX, and DAX analytical database queries and reporting layers.</li>
+                        <li>Integrated Google Cloud Platform and AWS serverless functions with backend microservices in C#, Java, Python, and Go.</li>
+                        <li>Utilized Unity and Godot engine workflows for specialized 2D/3D visualization interfaces and interactive UI state systems.</li>
+                        <li>Spearheaded web SEO management and technical site optimizations, driving search visibility and performance gains across client assets.</li>
+                    </ul>
+                </article>
+
+                <!-- NDT CERTIFICATION CARD -->
+                <article data-category="ndt" data-destructible="true" class="cv-card bg-space-panel backdrop-blur-md border border-yellow-500/40 p-6 rounded-lg pixel-border-gold hover:border-yellow-400 transition-all">
+                    <div class="mb-3">
+                        <span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 text-[10px] font-pixel">MARCH 2026</span>
+                        <h4 class="font-pixel text-base text-yellow-400 mt-1">NON-DESTRUCTIVE TESTING (NDT)</h4>
+                        <h5 class="text-xs font-terminal text-gray-300">AFRICAN NDT CENTRE</h5>
+                    </div>
+                    <div class="space-y-3 text-xs text-gray-300">
+                        <div class="p-2 bg-black/40 border border-yellow-500/30 rounded">
+                            <div class="font-pixel text-yellow-300 text-[11px]">MAGNETIC PARTICLE TESTING (MT)</div>
+                            <div class="text-gray-400 mt-0.5">Certified Level 1 & Level 2 Qualifications</div>
+                        </div>
+                        <p>Specialized in surface defect inspection, magnetic field leakage diagnostics, colour contrast testing, and fluorescent particle evaluation under blacklight.</p>
+                        <p class="text-gray-400">Trained in AutoCAD digital inspection modeling and weld sector structural integrity assurance.</p>
+                    </div>
+                </article>
+
+                <!-- EXPERIENCE CARD 2: LEAD LIFE -->
+                <article data-category="dev" data-destructible="true" class="cv-card bg-space-panel backdrop-blur-md border border-cyan-500/40 p-6 rounded-lg pixel-border">
+                    <div class="mb-3">
+                        <span class="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-[10px] font-pixel">2021 — 2022</span>
+                        <h4 class="font-pixel text-base text-cyan-300 mt-1">IT & DATABASE SUPPORT</h4>
+                        <h5 class="text-xs font-terminal text-yellow-400">LEAD LIFE (NPO)</h5>
+                    </div>
+                    <p class="text-xs text-gray-300 leading-relaxed">
+                        Managed non-profit IT infrastructure, local database backups, community workstation maintenance, and internal staff tech support workflows.
+                    </p>
+                </article>
+
+                <!-- EDUCATION CARD -->
+                <article data-category="edu" data-destructible="true" class="cv-card md:col-span-2 bg-space-panel backdrop-blur-md border border-purple-500/40 p-6 rounded-lg pixel-border">
+                    <div class="mb-3">
+                        <span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-pixel">ACADEMIC & PROFESSIONAL DIPLOMAS</span>
+                        <h4 class="font-pixel text-base text-purple-300 mt-1">EDUCATION & CERTIFICATIONS ARCHIVE</h4>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div class="p-3 bg-slate-900/80 border border-purple-500/30 rounded">
+                            <div class="font-pixel text-yellow-400">CTU TRAINING SOLUTIONS</div>
+                            <div class="text-gray-300">Software & Web Development Studies</div>
+                            <div class="text-gray-400 text-[10px] mt-1">NQF Level 5 & NQF Level 6 Qualifications</div>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 border border-purple-500/30 rounded">
+                            <div class="font-pixel text-cyan-300">CIW ASSOCIATE</div>
+                            <div class="text-gray-300">Certified Internet Webmaster</div>
+                            <div class="text-gray-400 text-[10px] mt-1">Foundational Web Architecture & Security</div>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 border border-purple-500/30 rounded sm:col-span-2">
+                            <div class="font-pixel text-green-400">MONDEOR HIGH SCHOOL</div>
+                            <div class="text-gray-300">National Senior Certificate + National Colours in Athletics</div>
+                        </div>
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+        <!-- TECHNICAL SKILLS MATRIX & LAB INFRASTRUCTURE -->
+        <section data-destructible="true" class="bg-space-panel backdrop-blur-md border border-cyan-500/40 p-6 rounded-lg pixel-border space-y-6">
+            <h3 class="font-pixel text-lg text-yellow-400">TECHNICAL SKILLS & HOME LAB INFRASTRUCTURE</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+                <div class="p-3 bg-slate-900/90 border border-cyan-500/30 rounded space-y-2">
+                    <div class="font-pixel text-cyan-400 text-[11px]">LANGUAGES</div>
+                    <div class="text-gray-300">TypeScript / JavaScript</div>
+                    <div class="text-gray-300">C# (.NET Core)</div>
+                    <div class="text-gray-300">Python & Go</div>
+                    <div class="text-gray-300">Java & SQL</div>
+                </div>
+
+                <div class="p-3 bg-slate-900/90 border border-cyan-500/30 rounded space-y-2">
+                    <div class="font-pixel text-cyan-400 text-[11px]">FRAMEWORKS</div>
+                    <div class="text-gray-300">React / Next.js</div>
+                    <div class="text-gray-300">Flutter & React Native</div>
+                    <div class="text-gray-300">Tailwind CSS</div>
+                    <div class="text-gray-300">Unity & Godot Engine</div>
+                </div>
+
+                <div class="p-3 bg-slate-900/90 border border-cyan-500/30 rounded space-y-2">
+                    <div class="font-pixel text-cyan-400 text-[11px]">DATA & CLOUD</div>
+                    <div class="text-gray-300">SQL, MDX & DAX</div>
+                    <div class="text-gray-300">Google Cloud Platform</div>
+                    <div class="text-gray-300">Amazon Web Services</div>
+                    <div class="text-gray-300">REST & GraphQL APIs</div>
+                </div>
+
+                <div class="p-3 bg-slate-900/90 border border-cyan-500/30 rounded space-y-2">
+                    <div class="font-pixel text-cyan-400 text-[11px]">LAB & INSPECTION</div>
+                    <div class="text-gray-300">Alpine Linux Lab</div>
+                    <div class="text-gray-300">Zorin OS Workstation</div>
+                    <div class="text-gray-300">NDT MT Level 1 & 2</div>
+                    <div class="text-gray-300">AutoCAD Inspection</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- LAYER 2: K.A.R.L. GLASSMORPHIC TERMINAL MODAL -->
+    <div id="karlModal" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl bg-slate-950/90 border-2 border-cyan-500 rounded-lg shadow-[0_0_30px_rgba(18,181,203,0.3)] crt-overlay overflow-hidden flex flex-col h-[85vh]">
+            
+            <!-- TERMINAL HEADER WITH KITT LARSON SCANNER -->
+            <div class="bg-slate-900 border-b border-cyan-500/40 p-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="flex items-center space-x-2">
+                    <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                    <span class="font-pixel text-xs text-red-400 tracking-wider">K.A.R.L. MARK-IV DUO-PILOT SPACER</span>
+                </div>
+                
+                <!-- 12-CELL LARSON SCANNER BAR -->
+                <div class="flex space-x-1 px-3 py-1 bg-black/80 rounded border border-red-900" id="larsonScanner">
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                    <div class="w-2.5 h-3 larson-cell"></div>
+                </div>
+
+                <button id="btnCloseKarl" class="text-gray-400 hover:text-white font-pixel text-xs px-2 py-1 bg-red-950/50 rounded">✕ CLOSE</button>
+            </div>
+
+            <!-- FUSION CORE DIAGNOSTIC HEADER WIDGET -->
+            <div class="bg-black/60 border-b border-cyan-500/20 px-4 py-2 flex justify-between items-center text-xs font-terminal">
+                <div class="flex items-center space-x-3">
+                    <canvas id="coreCanvas" width="36" height="36" class="border border-yellow-500/50 rounded-full"></canvas>
+                    <div>
+                        <div class="text-yellow-400">CORE STATUS: SUB-CHANDRASEKHAR SILICON-IRON BURN</div>
+                        <div class="text-gray-400">Mass: 1.43 M☉ | Mag-Particle Containment: 100% OK</div>
+                    </div>
+                </div>
+                <div class="text-right text-[11px] text-cyan-400 hidden sm:block">
+                    <div>COMMAND MODE ACTIVE</div>
+                    <div class="text-gray-500">TYPE /help FOR COMMANDS</div>
+                </div>
+            </div>
+
+            <!-- TERMINAL LOG DISPLAY AREA -->
+            <div id="terminalLog" class="flex-1 p-4 font-terminal text-sm sm:text-base text-cyan-300 overflow-y-auto space-y-3 leading-relaxed">
+                <div>[SYSTEM INITIALIZED] K.A.R.L. Online. Welcome, Co-Pilot. I am powered by a sub-Chandrasekhar dying-star fusion core held in equilibrium by Luke Gorry's NDT Level 2 magnetic containment techniques.</div>
+                <div>Type <span class="text-yellow-400">/help</span> to list commands, <span class="text-yellow-400">/cv</span> for experience, <span class="text-yellow-400">/core</span> for core astrophysics, or <span class="text-yellow-400">/noctus</span> to launch the Noctus Umbra D&D RPG!</div>
+            </div>
+
+            <!-- TERMINAL INPUT FORM -->
+            <form id="terminalForm" class="bg-slate-900/90 border-t border-cyan-500/40 p-3 flex gap-2">
+                <span class="text-yellow-400 font-terminal text-lg">K.A.R.L.&gt;</span>
+                <input type="text" id="terminalInput" class="flex-1 bg-transparent border-none outline-none font-terminal text-base text-cyan-200 placeholder-cyan-700" placeholder="Type a message or slash command..." autocomplete="off">
+                <button type="submit" class="px-4 py-1 bg-cyan-600 hover:bg-cyan-500 text-black font-pixel text-xs rounded">SEND</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOOTER & SPACE SHOOTER ARCADE LAUNCHER -->
+    <footer class="relative z-10 border-t border-cyan-500/30 bg-space-bg/90 py-8 px-4 text-center space-y-4">
+        <div class="max-w-7xl mx-auto flex flex-col items-center justify-center space-y-4">
+            <div class="font-pixel text-xs text-cyan-400">🎮 EASTER EGG #3: FOOTER ARCADE SHOOTER</div>
+            <button id="btnEngageShooter" class="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-pixel text-xs rounded pixel-border-red shadow-[0_0_15px_rgba(255,30,30,0.5)] transition-all transform hover:scale-105 active:scale-95">
+                ⚡ [ENGAGE WEAPONS: DESTROY THIS CV]
+            </button>
+            <p class="text-xs text-gray-400 max-w-md">
+                Blasts CV DOM blocks into fragmenting asteroids! Defeat the CV elements to summon <span class="text-yellow-400">THE ARCHITECT (LUKE GORRY)</span> pixel face boss.
+            </p>
+            <div class="text-[10px] text-gray-500 font-terminal">
+                © 2026 LUKE GORRY | ARCHITECTED WITH TAILWIND CSS & CANVAS 2D PHYSICS
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT APPLICATION CORE -->
+    <script>
+        /* ==========================================================================
+           1. THREE-BODY GRAVITATIONAL PHYSICS SIMULATION SOLVER (VERLET INTEGRATOR)
+           ========================================================================== */
+        const tbCanvas = document.getElementById('threeBodyCanvas');
+        const tbCtx = tbCanvas.getContext('2d');
+
+        function resizeCanvases() {
+            tbCanvas.width = window.innerWidth;
+            tbCanvas.height = window.innerHeight;
+            overlayCanvas.width = window.innerWidth;
+            overlayCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        // Softened Newtonian Gravity Parameter
+        const G = 1.0;
+        const eps2 = 0.001 * 0.001;
+        const dt = 0.0008;
+
+        // Presets
+        const presets = [
+            {
+                name: 'FIG-8',
+                bodies: [
+                    { m: 1.0, x: 0.97000436, y: -0.24308753, vx: 0.466203685, vy: 0.432365, trail: [] },
+                    { m: 1.0, x: -0.97000436, y: 0.24308753, vx: 0.466203685, vy: 0.432365, trail: [] },
+                    { m: 1.0, x: 0, y: 0, vx: -0.93240737, vy: -0.86473, trail: [] }
+                ]
+            },
+            {
+                name: 'LAGRANGE',
+                bodies: [
+                    { m: 1.0, x: 1.0, y: 0, vx: 0, vy: 0.5, trail: [] },
+                    { m: 1.0, x: -0.5, y: 0.866, vx: -0.433, vy: -0.25, trail: [] },
+                    { m: 1.0, x: -0.5, y: -0.866, vx: 0.433, vy: -0.25, trail: [] }
+                ]
+            },
+            {
+                name: 'MOTH-I',
+                bodies: [
+                    { m: 1.0, x: -1.0, y: 0, vx: 0.464445, vy: 0.396060, trail: [] },
+                    { m: 1.0, x: 1.0, y: 0, vx: 0.464445, vy: 0.396060, trail: [] },
+                    { m: 1.0, x: 0, y: 0, vx: -0.928890, vy: -0.792120, trail: [] }
+                ]
+            },
+            {
+                name: 'TRISOLARAN',
+                bodies: [
+                    { m: 1.2, x: -0.8, y: -0.2, vx: 0.1, vy: 0.6, trail: [] },
+                    { m: 1.0, x: 0.8, y: 0.1, vx: -0.3, vy: -0.4, trail: [] },
+                    { m: 0.8, x: 0.0, y: 0.7, vx: 0.2, vy: -0.2, trail: [] }
+                ]
+            }
+        ];
+
+        let currentPresetIdx = 0;
+        let bodies = JSON.parse(JSON.stringify(presets[0].bodies));
+
+        function computeAccelerations(bList) {
+            const accs = bList.map(() => ({ ax: 0, ay: 0 }));
+            for (let i = 0; i < bList.length; i++) {
+                for (let j = i + 1; j < bList.length; j++) {
+                    const dx = bList[j].x - bList[i].x;
+                    const dy = bList[j].y - bList[i].y;
+                    const distSq = dx * dx + dy * dy + eps2;
+                    const dist = Math.sqrt(distSq);
+                    const force = (G * bList[i].m * bList[j].m) / (distSq * dist);
+                    accs[i].ax += force * dx / bList[i].m;
+                    accs[i].ay += force * dy / bList[i].m;
+                    accs[j].ax -= force * dx / bList[j].m;
+                    accs[j].ay -= force * dy / bList[j].m;
+                }
+            }
+            return accs;
+        }
+
+        function verletStep() {
+            // Kick-Drift-Kick Velocity Verlet Integration
+            const accs1 = computeAccelerations(bodies);
+            for (let i = 0; i < bodies.length; i++) {
+                bodies[i].vx += 0.5 * accs1[i].ax * dt;
+                bodies[i].vy += 0.5 * accs1[i].ay * dt;
+                bodies[i].x += bodies[i].vx * dt;
+                bodies[i].y += bodies[i].vy * dt;
+            }
+            const accs2 = computeAccelerations(bodies);
+            for (let i = 0; i < bodies.length; i++) {
+                bodies[i].vx += 0.5 * accs2[i].ax * dt;
+                bodies[i].vy += 0.5 * accs2[i].ay * dt;
+            }
+        }
+
+        function setOrbitPreset(idx) {
+            currentPresetIdx = idx;
+            bodies = JSON.parse(JSON.stringify(presets[idx].bodies));
+            document.getElementById('lblPresetName').innerText = presets[idx].name;
+        }
+
+        document.getElementById('btnPresetSelect').addEventListener('click', () => {
+            setOrbitPreset((currentPresetIdx + 1) % presets.length);
+        });
+
+        document.getElementById('btnPerturb').addEventListener('click', () => {
+            bodies.forEach(b => {
+                b.vx += (Math.random() - 0.5) * 0.15;
+                b.vy += (Math.random() - 0.5) * 0.15;
+            });
+        });
+
+        // Render loop for 3-Body
+        const bodyColors = ['#12B5CB', '#FFD93D', '#FF1E1E'];
+
+        function drawThreeBody() {
+            tbCtx.fillStyle = '#0A0E1A';
+            tbCtx.fillRect(0, 0, tbCanvas.width, tbCanvas.height);
+
+            const scale = Math.min(tbCanvas.width, tbCanvas.height) * 0.22;
+            const cx = tbCanvas.width / 2;
+            const cy = tbCanvas.height / 2;
+
+            // Execute integration sub-steps
+            for (let s = 0; s < 15; s++) verletStep();
+
+            let totalK = 0, totalU = 0;
+
+            // Compute physics invariants for telemetry
+            for (let i = 0; i < bodies.length; i++) {
+                const b = bodies[i];
+                const px = cx + b.x * scale;
+                const py = cy + b.y * scale;
+
+                totalK += 0.5 * b.m * (b.vx * b.vx + b.vy * b.vy);
+
+                for (let j = i + 1; j < bodies.length; j++) {
+                    const dx = bodies[j].x - b.x;
+                    const dy = bodies[j].y - b.y;
+                    totalU -= (G * b.m * bodies[j].m) / Math.sqrt(dx * dx + dy * dy + eps2);
+                }
+
+                // Append trail
+                b.trail.push({ x: px, y: py });
+                if (b.trail.length > 80) b.trail.shift();
+
+                // Draw orbital trail
+                tbCtx.beginPath();
+                for (let t = 0; t < b.trail.length; t++) {
+                    const pt = b.trail[t];
+                    const alpha = (t / b.trail.length) * 0.4;
+                    tbCtx.strokeStyle = bodyColors[i % bodyColors.length];
+                    tbCtx.globalAlpha = alpha;
+                    if (t === 0) tbCtx.moveTo(pt.x, pt.y);
+                    else tbCtx.lineTo(pt.x, pt.y);
+                }
+                tbCtx.stroke();
+                tbCtx.globalAlpha = 1.0;
+
+                // Draw pixel body
+                tbCtx.fillStyle = bodyColors[i % bodyColors.length];
+                tbCtx.fillRect(px - 4, py - 4, 8, 8);
+                tbCtx.fillStyle = '#FFFFFF';
+                tbCtx.fillRect(px - 2, py - 2, 4, 4);
+            }
+
+            // Update Telemetry UI
+            document.getElementById('telemetryK').innerText = totalK.toFixed(3);
+            document.getElementById('telemetryU').innerText = totalU.toFixed(3);
+            document.getElementById('telemetryE').innerText = (totalK + totalU).toFixed(3);
+
+            requestAnimationFrame(drawThreeBody);
+        }
+
+        /* ==========================================================================
+           2. 16-ANGLE SPACESHIP CURSOR & PARTICLES OVERLAY
+           ========================================================================== */
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+
+        let targetX = window.innerWidth / 2;
+        let targetY = window.innerHeight / 2;
+        let shipX = targetX;
+        let shipY = targetY;
+        let shipAngle = 0;
+
+        const particles = [];
+
+        window.addEventListener('mousemove', (e) => {
+            targetX = e.clientX;
+            targetY = e.clientY;
+        });
+
+        window.addEventListener('click', (e) => {
+            // Spawn Hyper-drive particle burst on click
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                particles.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    color: i % 2 === 0 ? '#12B5CB' : '#FFD93D'
+                });
+            }
+        });
+
+        function drawOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            // Lerp cursor movement
+            const dx = targetX - shipX;
+            const dy = targetY - shipY;
+            shipX += dx * 0.18;
+            shipY += dy * 0.18;
+
+            if (Math.hypot(dx, dy) > 1) {
+                shipAngle = Math.atan2(dy, dx);
+                // Thruster particle exhaust
+                particles.push({
+                    x: shipX - Math.cos(shipAngle) * 12,
+                    y: shipY - Math.sin(shipAngle) * 12,
+                    vx: -Math.cos(shipAngle) * (1 + Math.random()) + (Math.random() - 0.5),
+                    vy: -Math.sin(shipAngle) * (1 + Math.random()) + (Math.random() - 0.5),
+                    life: 1.0,
+                    color: '#FF1E1E'
+                });
+            }
+
+            // Render Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.03;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                overlayCtx.fillStyle = p.color;
+                overlayCtx.globalAlpha = p.life;
+                overlayCtx.fillRect(p.x - 2, p.y - 2, 4, 4);
+            }
+            overlayCtx.globalAlpha = 1.0;
+
+            // Render Pixel Spaceship Cursor
+            overlayCtx.save();
+            overlayCtx.translate(shipX, shipY);
+            // Quantize angle to 16 directions (22.5 deg increments)
+            const quantizedAngle = Math.round(shipAngle / (Math.PI / 8)) * (Math.PI / 8);
+            overlayCtx.rotate(quantizedAngle + Math.PI / 2);
+
+            // Draw Pixel Ship Body
+            overlayCtx.fillStyle = '#12B5CB';
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(0, -10);
+            overlayCtx.lineTo(7, 8);
+            overlayCtx.lineTo(3, 6);
+            overlayCtx.lineTo(-3, 6);
+            overlayCtx.lineTo(-7, 8);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Cockpit highlight
+            overlayCtx.fillStyle = '#FFD93D';
+            overlayCtx.fillRect(-2, -4, 4, 4);
+
+            overlayCtx.restore();
+
+            // Render Targeting Reticle at true pointer
+            overlayCtx.strokeStyle = 'rgba(18, 181, 203, 0.5)';
+            overlayCtx.strokeRect(targetX - 4, targetY - 4, 8, 8);
+
+            requestAnimationFrame(drawOverlay);
+        }
+
+        /* ==========================================================================
+           3. K.A.R.L. CHATBOT & LARSON SCANNER TERMINAL
+           ========================================================================== */
+        const modal = document.getElementById('karlModal');
+        const btnToggleKarl = document.getElementById('btnToggleKarl');
+        const btnCloseKarl = document.getElementById('btnCloseKarl');
+        const terminalLog = document.getElementById('terminalLog');
+        const terminalForm = document.getElementById('terminalForm');
+        const terminalInput = document.getElementById('terminalInput');
+
+        btnToggleKarl.addEventListener('click', () => modal.classList.toggle('hidden'));
+        btnCloseKarl.addEventListener('click', () => modal.classList.add('hidden'));
+
+        function openKarlWithCommand(cmd) {
+            modal.classList.remove('hidden');
+            handleCommand(cmd);
+        }
+
+        // Larson Scanner Animation Loop
+        const larsonCells = document.querySelectorAll('.larson-cell');
+        let larsonIdx = 0;
+        let larsonDir = 1;
+
+        setInterval(() => {
+            larsonCells.forEach(c => c.className = 'w-2.5 h-3 larson-cell');
+            if (larsonCells[larsonIdx]) {
+                larsonCells[larsonIdx].classList.add('larson-active');
+                if (larsonCells[larsonIdx - larsonDir]) larsonCells[larsonIdx - larsonDir].classList.add('larson-trail-1');
+                if (larsonCells[larsonIdx - larsonDir * 2]) larsonCells[larsonIdx - larsonDir * 2].classList.add('larson-trail-2');
+            }
+            larsonIdx += larsonDir;
+            if (larsonIdx >= larsonCells.length - 1 || larsonIdx <= 0) larsonDir *= -1;
+        }, 80);
+
+        // Core Gauge Render Loop
+        const coreCanvas = document.getElementById('coreCanvas');
+        const coreCtx = coreCanvas.getContext('2d');
+        let corePulse = 0;
+
+        function drawCoreGauge() {
+            coreCtx.fillStyle = '#000000';
+            coreCtx.fillRect(0, 0, 36, 36);
+
+            corePulse += 0.05;
+            const r = 10 + Math.sin(corePulse) * 2;
+
+            // Silicon-Iron concentric plasma core
+            coreCtx.fillStyle = '#FF1E1E';
+            coreCtx.beginPath();
+            coreCtx.arc(18, 18, r, 0, Math.PI * 2);
+            coreCtx.fill();
+
+            coreCtx.fillStyle = '#FFD93D';
+            coreCtx.beginPath();
+            coreCtx.arc(18, 18, r * 0.5, 0, Math.PI * 2);
+            coreCtx.fill();
+
+            requestAnimationFrame(drawCoreGauge);
+        }
+
+        // Terminal Command Processing State Engine
+        let rpgActive = false;
+        let rpgState = { act: 1, step: 0 };
+
+        terminalForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = terminalInput.value.trim();
+            if (!text) return;
+            appendLog(`K.A.R.L.>&nbsp;${text}`, 'text-yellow-400');
+            terminalInput.value = '';
+            handleCommand(text);
+        });
+
+        function appendLog(htmlContent, textColor = 'text-cyan-300') {
+            const div = document.createElement('div');
+            div.className = textColor;
+            div.innerHTML = htmlContent;
+            terminalLog.appendChild(div);
+            terminalLog.scrollTop = terminalLog.scrollHeight;
+        }
+
+        function handleCommand(cmd) {
+            const lower = cmd.toLowerCase().trim();
+
+            if (rpgActive && !lower.startsWith('/')) {
+                handleRpgChoice(lower);
+                return;
+            }
+
+            if (lower === '/help') {
+                appendLog(`
+                    <div class="text-yellow-300 font-pixel text-xs mb-1">AVAILABLE K.A.R.L. COMMANDS:</div>
+                    <div><span class="text-cyan-400 font-bold">/cv</span> — View Luke Gorry's career summary & roles</div>
+                    <div><span class="text-cyan-400 font-bold">/ndt</span> — Inspect Level 1 & Level 2 NDT MT credentials</div>
+                    <div><span class="text-cyan-400 font-bold">/core</span> — Explain dying star sub-Chandrasekhar fusion core</div>
+                    <div><span class="text-cyan-400 font-bold">/noctus</span> — Launch the Noctus Umbra D&D Text RPG</div>
+                    <div><span class="text-cyan-400 font-bold">/clear</span> — Clear terminal output history</div>
+                `);
+            } else if (lower === '/cv' || lower.includes('experience') || lower.includes('work')) {
+                appendLog(`
+                    <div class="text-yellow-400 font-pixel text-xs">LUKE GORRY — CAREER DOSSIER</div>
+                    <div>• <span class="text-white">GEN318 (2022-2026):</span> Lead Developer & Systems Manager. Full-stack TS/JS, Flutter, React Native, C#, Go, SQL/MDX/DAX.</div>
+                    <div>• <span class="text-white">African NDT Centre (2026):</span> Certified NDT Magnetic Particle Testing (MT) Level 1 & Level 2.</div>
+                    <div>• <span class="text-white">Lead Life (2021-2022):</span> IT Infrastructure & Database Management.</div>
+                `);
+            } else if (lower === '/ndt' || lower.includes('magnetic')) {
+                appendLog(`
+                    <div class="text-yellow-400 font-pixel text-xs">MAGNETIC PARTICLE TESTING (NDT MT) STATUS</div>
+                    <div>Certified in March 2026 at African NDT Centre. Level 1 & Level 2 MT allows surface defect detection, flux leakage evaluation, blacklight fluorescent inspection, and structural weld integrity assessment.</div>
+                `);
+            } else if (lower === '/core' || lower.includes('fusion') || lower.includes('star')) {
+                appendLog(`
+                    <div class="text-red-400 font-pixel text-xs">FUSION CORE ASTROPHYSICS</div>
+                    <div>My reactor houses a <span class="text-yellow-300">1.43 M☉ Sub-Chandrasekhar Silicon-Iron Core</span>. At temperatures > 3x10^9 K, silicon fuses into inert iron-56. Because iron burning is endothermic, core hydrostatic pressure drops, risking electron degeneracy collapse. Luke Gorry's Level 2 NDT magnetic particle containment prevents vessel rupture!</div>
+                `);
+            } else if (lower === '/noctus' || lower.includes('rpg') || lower.includes('dnd')) {
+                startNoctusRpg();
+            } else if (lower === '/clear') {
+                terminalLog.innerHTML = '';
+            } else {
+                appendLog(`K.A.R.L.: Query '${cmd}' processed. I am trained on Luke Gorry's CV, NDT background, and fusion core mechanics. Type <span class="text-yellow-400">/help</span> for commands.`);
+            }
+        }
+
+        /* ==========================================================================
+           4. NOCTUS UMBRA D&D TEXT RPG ENGINE (EASTER EGG #2)
+           ========================================================================== */
+        const rpgCampaign = {
+            act1: {
+                title: "ACT I: SHADOWS OF HEATHERHAVEN & THE CRESCENT MINES",
+                text: "You step into Gicot as the Hollowbrand Guild. Mayor Robin de Beck reports missing citizens. Deep in Crescent Mine #4 under Bwali Bloodgrip, poison gas fills the Giant Tomb!",
+                choices: [
+                    { label: "1. Disarm Gas Pods (DC 18 CON / Investigation)", next: "act1_win" },
+                    { label: "2. Mine Dragonshards for 4-Hour Shift (DC 15 Athletics)", next: "act1_mine" }
+                ]
+            },
+            act1_win: {
+                text: "SUCCESS! You spot the trap mechanics, saving the Finders Guild. You recover Brom Sterling's werewolf notes and secure Heatherhaven!",
+                nextAct: "act2"
+            },
+            act1_mine: {
+                text: "You swing your pickaxe through the shift. You unearth glowing Dragonshards and initiate a slave uprising against Capt. Orren's slavers!",
+                nextAct: "act2"
+            },
+            act2: {
+                title: "ACT II: TUG OF WAR FOR STO'S SOUL",
+                text: "Stoiskur awakens bound in Paulie's Yawning Cow Inn. Bryda Ginte reads her book nearby. The cursed Flame Axe pulsates with Capt. Orion's spirit!",
+                choices: [
+                    { label: "1. Initiate 6-Stage Soul Tug-of-War (DC 16 Wisdom Save)", next: "act2_win" },
+                    { label: "2. Attack Orion's Ghost Knights head-on", next: "act2_win" }
+                ]
+            },
+            act2_win: {
+                text: "VICTORY! The red runes turn brilliant blue! Stoiskur reclaims control of his Flame Axe with the Hollowbrand Guild by his side.",
+                nextAct: "act3"
+            },
+            act3: {
+                title: "ACT III: THE MOTHER'S MIRROR & ASTRAL DREADNOUGHT",
+                text: "Cavalier Simmers enters The Mother's Mirror. Water fills the chamber. Later, an Astral Dreadnought swallows your vessel into its demiplane!",
+                choices: [
+                    { label: "1. Charge Dragonshards with 3rd-Level Spell Slots", next: "act3_win" },
+                    { label: "2. Confront the Abyssal Sibriex directly", next: "act3_win" }
+                ]
+            },
+            act3_win: {
+                text: "CRITICAL SUCCESS! The teleporter sparks to life, tearing through space back to Callian where you defeat the Sibriex!",
+                nextAct: "act4"
+            },
+            act4: {
+                title: "ACT IV: SUNFLOWER DAY & THE WROAT SEWER DEEP",
+                text: "Year 298 AoM. Lotus Helianthus steals the Silver Books. You board the Lightning Rail into foggy Wroat to infiltrate Sewer Deep during the Masquerade Parade!",
+                choices: [
+                    { label: "1. Decode Jasmine's Book Cipher (Row 1 | Shelf 1 | Book 1)", next: "end" },
+                    { label: "2. Engage the Bagman at the WinBag", next: "end" }
+                ]
+            }
+        };
+
+        function startNoctusRpg() {
+            rpgActive = true;
+            rpgState = { act: 'act1' };
+            appendLog(`
+                <div class="p-3 bg-purple-950/80 border border-purple-500 rounded my-2">
+                    <div class="font-pixel text-yellow-400 text-xs">🗡️ NOCTUS UMBRA: D&D 5E CAMPAIGN ENGINE</div>
+                    <div class="text-xs text-purple-200 mt-1">Recounting Seasons 1–4 of the Hollowbrand Guild (The Crystal Heart Heroes).</div>
+                </div>
+            `);
+            renderRpgStep();
+        }
+
+        function renderRpgStep() {
+            const data = rpgCampaign[rpgState.act];
+            if (!data) return;
+
+            let html = `<div class="text-yellow-300 font-pixel text-xs mt-2">${data.title || 'NOCTUS UMBRA'}</div>`;
+            html += `<div class="text-gray-200 text-sm">${data.text}</div>`;
+
+            if (data.choices) {
+                html += `<div class="mt-2 space-y-1 text-cyan-400 font-bold">`;
+                data.choices.forEach(c => {
+                    html += `<div>${c.label}</div>`;
+                });
+                html += `</div><div class="text-xs text-gray-400 mt-1">Type 1 or 2 to choose option...</div>`;
+            } else if (data.nextAct) {
+                html += `<div class="text-xs text-yellow-400 mt-2">Type 'next' to proceed to next Act...</div>`;
+            } else {
+                html += `<div class="text-green-400 font-pixel text-xs mt-2">🎉 CAMPAIGN COMPLETED! TYPE /help TO EXIT RPG.</div>`;
+                rpgActive = false;
+            }
+            appendLog(html);
+        }
+
+        function handleRpgChoice(input) {
+            const data = rpgCampaign[rpgState.act];
+            if (!data) return;
+
+            if (data.choices) {
+                if (input === '1' || input === '2') {
+                    const d20 = Math.floor(Math.random() * 20) + 1;
+                    appendLog(`🎲 [D20 ROLL]: Rolled ${d20} + 5 Modifier = ${d20 + 5}!`, 'text-yellow-400');
+                    const idx = parseInt(input) - 1;
+                    rpgState.act = data.choices[idx].next;
+                    renderRpgStep();
+                } else {
+                    appendLog("Please enter '1' or '2'.", "text-red-400");
+                }
+            } else if (data.nextAct) {
+                rpgState.act = data.nextAct;
+                renderRpgStep();
+            }
+        }
+
+        /* ==========================================================================
+           5. FOOTER SPACE SHOOTER & LUKE GORRY PIXEL FACE BOSS (EASTER EGG #3)
+           ========================================================================== */
+        const btnEngageShooter = document.getElementById('btnEngageShooter');
+        let shooterActive = false;
+        let asteroids = [];
+        let bullets = [];
+        let boss = null;
+        let score = 0;
+
+        btnEngageShooter.addEventListener('click', () => {
+            if (shooterActive) return;
+            shooterActive = true;
+            btnEngageShooter.innerText = '🎯 SHOOTER ACTIVE! USE WASD / ARROWS + SPACE';
+            
+            // Virtualize CV DOM elements into destructible Asteroid entities
+            const cards = document.querySelectorAll('[data-destructible="true"]');
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                card.style.visibility = 'hidden'; // Hide DOM element while preserving box model layout
+
+                asteroids.push({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2,
+                    w: Math.max(40, rect.width * 0.4),
+                    h: Math.max(30, rect.height * 0.4),
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    hp: 4,
+                    label: card.querySelector('h4')?.innerText.substring(0, 12) || 'CV BLOCK'
+                });
+            });
+
+            window.addEventListener('keydown', handleShooterKeys);
+            requestAnimationFrame(shooterLoop);
+        });
+
+        function handleShooterKeys(e) {
+            if (!shooterActive) return;
+            if (e.code === 'Space') {
+                // Fire Laser Bullet from player ship position
+                bullets.push({
+                    x: shipX,
+                    y: shipY - 10,
+                    vx: Math.cos(shipAngle) * 8,
+                    vy: Math.sin(shipAngle) * 8
+                });
+            }
+        }
+
+        function shooterLoop() {
+            if (!shooterActive) return;
+
+            // Render laser bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+
+                overlayCtx.fillStyle = '#FF1E1E';
+                overlayCtx.fillRect(b.x - 2, b.y - 2, 4, 8);
+
+                // Bullet-Asteroid Collision Detection
+                for (let j = asteroids.length - 1; j >= 0; j--) {
+                    const ast = asteroids[j];
+                    if (Math.hypot(b.x - ast.x, b.y - ast.y) < ast.w / 2) {
+                        ast.hp--;
+                        bullets.splice(i, 1);
+                        score += 50;
+
+                        if (ast.hp <= 0) {
+                            // Split asteroid into smaller fragments
+                            if (ast.w > 25) {
+                                asteroids.push({
+                                    x: ast.x - 10, y: ast.y, w: ast.w / 2, h: ast.h / 2,
+                                    vx: -1.5, vy: 1, hp: 2, label: 'SKILL'
+                                });
+                                asteroids.push({
+                                    x: ast.x + 10, y: ast.y, w: ast.w / 2, h: ast.h / 2,
+                                    vx: 1.5, vy: -1, hp: 2, label: 'NDT'
+                                });
+                            }
+                            asteroids.splice(j, 1);
+                        }
+                        break;
+                    }
+                }
+
+                // Remove out of bounds bullets
+                if (b.y < 0 || b.y > window.innerHeight || b.x < 0 || b.x > window.innerWidth) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Render Asteroid entities
+            asteroids.forEach(ast => {
+                ast.x += ast.vx;
+                ast.y += ast.vy;
+
+                // Bounce off edges
+                if (ast.x < 0 || ast.x > window.innerWidth) ast.vx *= -1;
+                if (ast.y < 0 || ast.y > window.innerHeight) ast.vy *= -1;
+
+                overlayCtx.strokeStyle = '#12B5CB';
+                overlayCtx.lineWidth = 2;
+                overlayCtx.strokeRect(ast.x - ast.w / 2, ast.y - ast.h / 2, ast.w, ast.h);
+                overlayCtx.fillStyle = '#0A0E1A';
+                overlayCtx.fillRect(ast.x - ast.w / 2, ast.y - ast.h / 2, ast.w, ast.h);
+
+                overlayCtx.fillStyle = '#FFD93D';
+                overlayCtx.font = '10px "Press Start 2P"';
+                overlayCtx.fillText(ast.label, ast.x - ast.w / 2 + 4, ast.y);
+            });
+
+            // Spawn THE ARCHITECT Boss when all asteroids cleared
+            if (asteroids.length === 0 && !boss) {
+                boss = {
+                    x: window.innerWidth / 2,
+                    y: 120,
+                    hp: 50,
+                    maxHp: 50,
+                    phase: 1
+                };
+            }
+
+            // Render Boss Battle if active
+            if (boss) {
+                overlayCtx.fillStyle = '#FF1E1E';
+                overlayCtx.fillRect(boss.x - 40, boss.y - 40, 80, 80);
+                overlayCtx.fillStyle = '#FFD93D';
+                overlayCtx.fillRect(boss.x - 25, boss.y - 20, 15, 15); // Eye 1
+                overlayCtx.fillRect(boss.x + 10, boss.y - 20, 15, 15); // Eye 2
+                overlayCtx.fillRect(boss.x - 20, boss.y + 15, 40, 10); // Mouth
+
+                // Boss HP Bar
+                overlayCtx.fillStyle = '#000000';
+                overlayCtx.fillRect(boss.x - 50, boss.y - 60, 100, 10);
+                overlayCtx.fillStyle = '#10B981';
+                overlayCtx.fillRect(boss.x - 50, boss.y - 60, (boss.hp / boss.maxHp) * 100, 10);
+
+                overlayCtx.fillStyle = '#FFFFFF';
+                overlayCtx.font = '10px "Press Start 2P"';
+                overlayCtx.fillText("THE ARCHITECT (LUKE GORRY)", boss.x - 90, boss.y - 70);
+
+                // Boss hit check
+                bullets.forEach((b, bi) => {
+                    if (Math.hypot(b.x - boss.x, b.y - boss.y) < 45) {
+                        boss.hp--;
+                        bullets.splice(bi, 1);
+                        if (boss.hp <= 0) {
+                            alert("🏆 VICTORY! YOU DEFEATED THE ARCHITECT BOSS!\nScore: " + score);
+                            shooterActive = false;
+                            document.querySelectorAll('[data-destructible="true"]').forEach(c => c.style.visibility = 'visible');
+                        }
+                    }
+                });
+            }
+
+            requestAnimationFrame(shooterLoop);
+        }
+
+        /* ==========================================================================
+           6. BENTO GRID CATEGORY FILTERING
+           ========================================================================== */
+        const filterBtns = document.querySelectorAll('.btn-filter');
+        const cvCards = document.querySelectorAll('.cv-card');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-cyan-500', 'text-black');
+                    b.classList.add('bg-slate-800', 'text-cyan-300');
+                });
+                btn.classList.remove('bg-slate-800', 'text-cyan-300');
+                btn.classList.add('bg-cyan-500', 'text-black');
+
+                const filter = btn.getAttribute('data-filter');
+                cvCards.forEach(card => {
+                    if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Initialize background animation loops
+        resizeCanvases();
+        requestAnimationFrame(drawThreeBody);
+        requestAnimationFrame(drawOverlay);
+        requestAnimationFrame(drawCoreGauge);
+    </script>
+</body>
+</html>

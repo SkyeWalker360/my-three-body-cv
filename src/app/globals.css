@@ -1,0 +1,214 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Every colour on the site comes from here; Tailwind's default palette is
+ * removed so off-token colours can't creep back in. Contrast ratios are against --color-void.
+ */
+@theme static {
+  --color-*: initial;
+  --color-void: #0a0e1a;
+  --color-panel: rgba(15, 23, 42, 0.85);
+  --color-ink: #e2e8f0; /* 15.6:1 */
+  --color-ink-muted: #94a3b8; /* 7.5:1 */
+  --color-cyan: #12b5cb; /* 7.8:1 */
+  --color-gold: #ffd93d; /* 14.0:1 */
+  --color-red: #ff1e1e; /* 5.0:1, never long text runs */
+  --color-green: #10b981; /* 7.6:1 */
+  --color-violet: #7c3aed; /* 3.4:1, fills and borders only, never text */
+  --color-violet-ink: #a78bfa; /* violet for text */
+
+  --font-pixel: var(--font-press-start), monospace;
+  --font-terminal: var(--font-vt323), monospace;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+
+  --radius-pixel: 2px;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-void);
+    color: var(--color-ink);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-void);
+    font-family: var(--font-mono);
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--color-cyan);
+    color: var(--color-void);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 4px;
+  }
+
+  a {
+    color: var(--color-cyan);
+  }
+}
+
+@utility pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* The 4 px stepped pixel border from the prototype. */
+@utility pixel-border {
+  box-shadow:
+    -4px 0 0 0 var(--pixel-border, var(--color-cyan)),
+    4px 0 0 0 var(--pixel-border, var(--color-cyan)),
+    0 -4px 0 0 var(--pixel-border, var(--color-cyan)),
+    0 4px 0 0 var(--pixel-border, var(--color-cyan));
+}
+
+@utility glass {
+  background-color: var(--color-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* CRT scanlines: only on the K.A.R.L. window, never over CV text. */
+@utility crt {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(transparent 50%, rgb(0 0 0 / 0.2) 50%),
+      linear-gradient(90deg, rgb(255 0 0 / 0.04), rgb(0 255 0 / 0.015), rgb(0 0 255 / 0.04));
+    background-size:
+      100% 4px,
+      8px 100%;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid currentColor;
+    border-radius: var(--radius-pixel);
+    font-family: var(--font-pixel);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      background-color 120ms,
+      color 120ms,
+      transform 80ms;
+  }
+  .btn:active {
+    transform: translateY(2px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: progress;
+  }
+  .btn-cyan {
+    color: var(--color-void);
+    background-color: var(--color-cyan);
+    border-color: var(--color-cyan);
+  }
+  .btn-cyan:hover {
+    background-color: var(--color-ink);
+    border-color: var(--color-ink);
+  }
+  .btn-gold {
+    color: var(--color-void);
+    background-color: var(--color-gold);
+    border-color: var(--color-gold);
+  }
+  .btn-gold:hover {
+    background-color: var(--color-ink);
+    border-color: var(--color-ink);
+  }
+  .btn-ghost {
+    color: var(--color-cyan);
+    background-color: var(--color-void);
+  }
+  .btn-ghost:hover,
+  .btn-ghost[aria-pressed='true'] {
+    color: var(--color-void);
+    background-color: var(--color-cyan);
+  }
+  .btn-red {
+    color: var(--color-ink);
+    background-color: var(--color-void);
+    border-color: var(--color-red);
+  }
+  .btn-red:hover {
+    background-color: var(--color-red);
+    color: var(--color-void);
+  }
+  .btn-violet {
+    color: var(--color-violet-ink);
+    background-color: var(--color-void);
+    border-color: var(--color-violet);
+  }
+  .btn-violet:hover {
+    background-color: var(--color-violet);
+    color: var(--color-ink);
+  }
+}
+
+/* CV filters: work by attribute so the cards are always in the HTML. */
+[data-filter='dev'] [data-sector]:not([data-sector='dev']),
+[data-filter='ndt'] [data-sector]:not([data-sector='ndt']),
+[data-filter='edu'] [data-sector]:not([data-sector='edu']),
+[data-filter='dev'] [data-sectors]:not([data-sectors~='dev']),
+[data-filter='ndt'] [data-sectors]:not([data-sectors~='ndt']),
+[data-filter='edu'] [data-sectors]:not([data-sectors~='edu']) {
+  display: none;
+}
+
+/* The ship cursor replaces the native one only while it is actually drawing. */
+html.ship-cursor,
+html.ship-cursor * {
+  cursor: none !important;
+}
+
+/* While the shooter runs, the page doesn't scroll under the asteroids. */
+html.shooter-active {
+  overflow: hidden;
+}
+
+.karl-dialog::backdrop {
+  background-color: rgb(10 14 26 / 0.7);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes restore-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.restore-fade {
+  animation: restore-fade 600ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

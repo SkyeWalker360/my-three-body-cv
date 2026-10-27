@@ -1,0 +1,18 @@
+node_modules
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+coverage
+playwright-report
+test-results
+.env*.local
+
+# Private source documents: the original CV has a phone number and street address.
+docs/*.docx
+docs/*.pdf
+docs/*.jpg
+
+# Generated at build time from content/
+public/cv.pdf
+public/noctus/

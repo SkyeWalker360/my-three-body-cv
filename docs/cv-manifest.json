@@ -1,0 +1,350 @@
+{
+  "$schemaVersion": 1,
+  "source": "Luke_Gorry_CV_2026 (docx/pdf, updated 2026-10-27), transcribed verbatim",
+  "person": {
+    "name": "Luke Gorry",
+    "title": "Full-Stack Software Developer & Certified NDT Technician (MT Levels 1 & 2)",
+    "location": "Gauteng, South Africa",
+    "summary": "A highly motivated and versatile professional with over three years of experience in full-stack software development and recent, specialised qualifications in Non-Destructive Testing (NDT) – Magnetic Particle Testing Levels 1 and 2. Eager to apply a unique blend of technical problem-solving skills from software engineering to the precision and safety-critical demands of the NDT industry. Possesses a strong aptitude for learning new technologies and processes, and a commitment to delivering 100% accuracy and quality in every task. Whether developing a CRM application or conducting weld inspections, I take pride in my work and consistently give my full ability to every project.",
+    "contact": {
+      "email": "lukempgorry@gmail.com",
+      "linkedin": "https://www.linkedin.com/in/luke-gorry-951502239",
+      "github": "https://github.com/SkyeWalker360"
+    }
+  },
+  "experience": [
+    {
+      "id": "gen318",
+      "org": "GEN318",
+      "role": "Lead Developer & Systems Management",
+      "start": "2022-11",
+      "end": "2026-02",
+      "location": "Johannesburg, South Africa",
+      "sector": "dev",
+      "kind": "employment",
+      "summary": "Lead Developer for GEN318, developing Customer Relationship Management (CRM) web applications for various clients.",
+      "roles": [
+        {
+          "title": "Lead Mobile Developer",
+          "highlights": [
+            "Creation and design of application UI/UX.",
+            "Coding applications in Flutter or React Native (JavaScript or TypeScript).",
+            "Application maintenance and bug fixes."
+          ]
+        },
+        {
+          "title": "Web Developer",
+          "highlights": [
+            "Managing the web development team.",
+            "Overseeing website SEO, and updating and maintaining websites.",
+            "Creating and maintaining GEN318 cloud-based functions.",
+            "Integrating Google and Amazon APIs."
+          ]
+        },
+        {
+          "title": "Database & Automation Manager",
+          "highlights": [
+            "Maintaining and updating company databases.",
+            "Creating and integrating database automations.",
+            "Data import and sanitation.",
+            "Ad-hoc duties including data searches, data reporting and drafting documents."
+          ]
+        },
+        {
+          "title": "Customer Relations",
+          "highlights": [
+            "Communicating with clients to understand their needs when developing for them.",
+            "Providing IT and technical support to clients."
+          ]
+        }
+      ],
+      "game": {
+        "hp": 8,
+        "fragments": [
+          "Lead Mobile Dev",
+          "Web Developer",
+          "Database & Automation",
+          "Customer Relations"
+        ]
+      },
+      "clients": [
+        "Lead Life"
+      ]
+    },
+    {
+      "id": "lead-life",
+      "org": "Lead Life",
+      "role": "IT / Database Management Support",
+      "start": "2021-11",
+      "end": "2022",
+      "location": "Johannesburg, South Africa",
+      "sector": "dev",
+      "kind": "volunteering",
+      "highlights": [
+        "Provided IT support to all employees.",
+        "Organised and managed the company's real-estate leads.",
+        "Working with people taught me patience and how to explain things clearly without coming across as patronising."
+      ],
+      "later": "Later worked with Lead Life as a client through GEN318.",
+      "game": {
+        "hp": 4,
+        "fragments": [
+          "IT Support",
+          "Leads"
+        ]
+      }
+    }
+  ],
+  "projects": [
+    {
+      "id": "homelab",
+      "name": "Multi-Node Homelab",
+      "tagline": "Self-hosted infrastructure (NixOS, Proxmox)",
+      "start": "2025",
+      "end": null,
+      "sector": "dev",
+      "highlights": [
+        "Infrastructure as code: Designed and run a self-hosted lab of several machines, with every server's setup kept in version-controlled code.",
+        "Networking & security: Connected all machines over a Tailscale private network, set up network-wide DNS and ad-blocking with AdGuard Home, and kept passwords and keys encrypted in the config with sops-nix.",
+        "Backups & storage: Set up automated, encrypted backups between servers with restic, and ZFS storage.",
+        "Self-hosted AI: Run local AI models (Ollama on an AMD GPU) and a virtual machine that coordinates AI coding agents."
+      ],
+      "game": {
+        "hp": 6,
+        "fragments": [
+          "NixOS",
+          "Proxmox",
+          "Tailscale",
+          "restic + ZFS",
+          "Ollama"
+        ]
+      }
+    }
+  ],
+  "certifications": [
+    {
+      "id": "ndt-mt",
+      "name": "Magnetic Particle Testing (MT) Level 1 & Level 2",
+      "issuer": "African NDT Centre (Pty) Ltd",
+      "location": "Gauteng, South Africa",
+      "start": "2026-03",
+      "end": "2026-05",
+      "levels": [
+        "Magnetic Particle Testing (MT) Level 1",
+        "Magnetic Particle Testing (MT) Level 2"
+      ],
+      "sector": "ndt",
+      "game": {
+        "hp": 6,
+        "fragments": [
+          "MT Level 1",
+          "MT Level 2",
+          "Weld Sector Inspection",
+          "Fluorescent Testing"
+        ]
+      }
+    }
+  ],
+  "education": [
+    {
+      "id": "ctu",
+      "institution": "CTU Training Solutions",
+      "award": "Information Technology & Web Certifications",
+      "location": "Gauteng, South Africa",
+      "start": "2018",
+      "end": "2021-10",
+      "sector": "edu",
+      "qualifications": [
+        "National Certificate: Information Technology – Database Development (SQL, MDX, DAX, Azure) (NQF Level 6): Basic Server Management, Change Management, Database Development, Designing and Implementing AI Solutions, Database Data Querying.",
+        "National Certificate: Information Technology – Systems Development (C# .NET, Unity) (NQF Level 5): Games Programming, Internet Programming, Programming, Soft Skills.",
+        "Certified Internet Web Professional (HTML, CSS, JavaScript, Java): Graphical User Interface Design, Web Computing, Information Systems, Software Development, Web Management.",
+        "CIW Certifications: CIW Internet Business Associate, CIW Site Development Associate, CIW Network Technology Associate, CIW Web Foundations Associate.",
+        "Internet Skills: Web browsers, mobile devices, SMS, email, FTP, social networking, e-commerce; web page authoring in HTML5, CSS and JavaScript; basic networking components, protocols and server configuration; basic security concepts and virus protection; project management for individual and team tasks."
+      ],
+      "game": {
+        "hp": 5,
+        "fragments": [
+          "NQF 6 Database Dev",
+          "NQF 5 Systems Dev",
+          "CIW"
+        ]
+      }
+    },
+    {
+      "id": "mondeor",
+      "institution": "Mondeor High School",
+      "award": "National Senior Certificate",
+      "location": "Gauteng, South Africa",
+      "start": "2013",
+      "end": "2017-12",
+      "sector": "edu",
+      "detail": "Subjects: English Home Language, Afrikaans First Additional Language, Mathematics, Life Orientation, Accounting, History, Life Sciences.",
+      "game": {
+        "hp": 3,
+        "fragments": [
+          "NSC"
+        ]
+      }
+    }
+  ],
+  "skills": [
+    {
+      "category": "NDT & Inspection",
+      "sector": "ndt",
+      "items": [
+        "Non-Destructive Testing (NDT)",
+        "Magnetic Particle Testing (MT)",
+        "Weld Sector Inspection",
+        "Colour Contrast Testing",
+        "Fluorescent Testing",
+        "Portable Equipment Operation",
+        "Quality Assurance",
+        "Technical Inspection",
+        "Safety Compliance",
+        "AutoCAD"
+      ]
+    },
+    {
+      "category": "Coding Languages",
+      "sector": "dev",
+      "items": [
+        "C#",
+        "Java",
+        "Python",
+        "JavaScript",
+        "TypeScript",
+        "Go"
+      ]
+    },
+    {
+      "category": "Web Development",
+      "sector": "dev",
+      "items": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "React",
+        "Next.js",
+        "Node.js",
+        "WordPress",
+        "REST APIs",
+        "GraphQL"
+      ]
+    },
+    {
+      "category": "Cloud",
+      "sector": "dev",
+      "items": [
+        "Google Cloud Platform",
+        "Amazon Web Services"
+      ]
+    },
+    {
+      "category": "Database Development",
+      "sector": "dev",
+      "items": [
+        "SQL",
+        "MDX",
+        "DAX"
+      ]
+    },
+    {
+      "category": "Mobile Development",
+      "sector": "dev",
+      "items": [
+        "Flutter",
+        "React Native",
+        "Xamarin Forms"
+      ]
+    },
+    {
+      "category": "Game Development",
+      "sector": "dev",
+      "items": [
+        "Unity",
+        "Godot"
+      ]
+    },
+    {
+      "category": "Microsoft Office",
+      "sector": "other",
+      "items": [
+        "Word",
+        "Excel",
+        "PowerPoint"
+      ]
+    },
+    {
+      "category": "Video & Photo Editing",
+      "sector": "other",
+      "items": [
+        "Adobe Photoshop",
+        "Adobe Premiere Pro"
+      ]
+    }
+  ],
+  "spokenLanguages": [
+    {
+      "language": "English",
+      "level": "Native"
+    },
+    {
+      "language": "Afrikaans",
+      "level": "Fluent"
+    }
+  ],
+  "achievements": [
+    "Athletics Sports Captain at Mondeor High School",
+    "Member of the Mondeor High School Student Executive Council",
+    "Earned National Colours in Athletics (2013)"
+  ],
+  "karl": {
+    "aliases": {
+      "gen318": [
+        "gen318",
+        "work",
+        "experience",
+        "job",
+        "crm",
+        "lead developer",
+        "jobs"
+      ],
+      "ndt-mt": [
+        "ndt",
+        "magnetic",
+        "particle",
+        "mt",
+        "inspection",
+        "weld",
+        "african ndt"
+      ],
+      "homelab": [
+        "homelab",
+        "home lab",
+        "nixos",
+        "proxmox",
+        "self-hosted",
+        "lab"
+      ],
+      "ctu": [
+        "ctu",
+        "nqf",
+        "ciw",
+        "education",
+        "certificate",
+        "study"
+      ],
+      "lead-life": [
+        "lead life",
+        "volunteer",
+        "volunteering"
+      ],
+      "mondeor": [
+        "school",
+        "matric",
+        "mondeor",
+        "athletics"
+      ]
+    }
+  }
+}
