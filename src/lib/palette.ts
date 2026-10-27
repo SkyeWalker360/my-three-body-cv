@@ -45,3 +45,16 @@ export function withAlpha(hex: string, alpha: number): string {
   const [r, g, b] = hexToRgb(hex);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+/** The shading ramps in the theme, each six steps from shadow (0) to highlight (5). */
+export const RAMP_NAMES = ['void', 'cyan', 'gold', 'red', 'violet'] as const;
+export type RampName = (typeof RAMP_NAMES)[number];
+export const RAMP_STEPS = 6;
+
+/** Read one ramp as "#rrggbb" strings, dark → light, for sprite and planet canvases. */
+export function readRamp(name: RampName): string[] {
+  const style = getComputedStyle(document.documentElement);
+  return Array.from({ length: RAMP_STEPS }, (_, i) =>
+    style.getPropertyValue(`--color-${name}-${i}`).trim(),
+  );
+}

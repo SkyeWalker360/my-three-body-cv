@@ -17,6 +17,44 @@
   --color-violet: #7c3aed; /* 3.4:1, fills and borders only, never text */
   --color-violet-ink: #a78bfa; /* violet for text */
 
+  /*
+   * Shading ramps for pixel art (sprites, planets, dithered canvases), dark → light.
+   * Each step shifts hue ~12° (cooler into shadow, warmer into light). Each ramp contains
+   * its base token unchanged: void-1 = void, and step 3 of the others = the base colour.
+   * Ramp steps are for canvas and sprite art; UI text keeps the contrast-checked tokens above.
+   * After editing, run `pnpm palette` to regenerate the Aseprite palette.
+   */
+  --color-void-0: #05060b;
+  --color-void-1: #0a0e1a;
+  --color-void-2: #141d2e;
+  --color-void-3: #213145;
+  --color-void-4: #324c62;
+  --color-void-5: #4c748a;
+  --color-cyan-0: #0a101f;
+  --color-cyan-1: #102841;
+  --color-cyan-2: #145776;
+  --color-cyan-3: #12b5cb;
+  --color-cyan-4: #43e5d8;
+  --color-cyan-5: #a9efdb;
+  --color-gold-0: #31130c;
+  --color-gold-1: #693511;
+  --color-gold-2: #bd780f;
+  --color-gold-3: #ffd93d;
+  --color-gold-4: #f9ef86;
+  --color-gold-5: #faf7d1;
+  --color-red-0: #25091a;
+  --color-red-1: #4f0d27;
+  --color-red-2: #920c27;
+  --color-red-3: #ff1e1e;
+  --color-red-4: #f56a47;
+  --color-red-5: #f4be99;
+  --color-violet-0: #0d0b23;
+  --color-violet-1: #161145;
+  --color-violet-2: #251476;
+  --color-violet-3: #7c3aed;
+  --color-violet-4: #bd7eec;
+  --color-violet-5: #e5bbf2;
+
   --font-pixel: var(--font-press-start), monospace;
   --font-terminal: var(--font-vt323), monospace;
   --font-mono: var(--font-space-mono), ui-monospace, monospace;

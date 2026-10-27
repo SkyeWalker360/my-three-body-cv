@@ -16,3 +16,6 @@ docs/*.jpg
 # Generated at build time from content/
 public/cv.pdf
 public/noctus/
+
+# Screenshots from the Playwright MCP server
+.playwright-mcp/
