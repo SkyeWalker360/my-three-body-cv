@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { hexToRgb, RAMP_NAMES } from '@/lib/palette';
+import { hexToRgb, SHADING_RAMPS } from '@/lib/palette';
 import { parseRamps, toGpl } from '../../scripts/palette-lib';
 
 const css = readFileSync('src/app/globals.css', 'utf8');
@@ -28,10 +28,20 @@ describe('shading ramps', () => {
   });
 
   it('get strictly brighter from step 0 to step 5', () => {
-    for (const name of RAMP_NAMES) {
+    for (const name of SHADING_RAMPS) {
       const lum = ramps[name].map(luminance);
       for (let i = 1; i < lum.length; i++) expect(lum[i]).toBeGreaterThan(lum[i - 1]!);
     }
+  });
+
+  it('include a stellar ramp that runs from cool red to hot blue-white', () => {
+    expect(ramps.star[2]).toBe(token('gold'));
+    // Hotter stars are bluer: (g + b) / r rises at every step.
+    const blueness = ramps.star.map((hex) => {
+      const [r, g, b] = hexToRgb(hex);
+      return (g + b) / r;
+    });
+    for (let i = 1; i < blueness.length; i++) expect(blueness[i]).toBeGreaterThan(blueness[i - 1]!);
   });
 
   it('match the committed Aseprite palette (run `pnpm palette` if this fails)', () => {

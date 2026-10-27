@@ -40,7 +40,7 @@ Keep the prototype's look, but enforce it through tokens: every colour in the co
 
 In place of violet text, use a lighter `--color-violet-ink` of at least 4.5:1, such as #A78BFA.
 
-For pixel art, each of void, cyan, gold, red and violet also has a six-step shading ramp (`--color-<name>-0` to `-5`, dark to light, hue-shifted about 12° per step). Each ramp contains its base token unchanged. Ramp steps are for sprites, planets and dithered canvases, not text. `pnpm palette` exports them as `design/three-body-cv.gpl` for Aseprite.
+For pixel art, each of void, cyan, gold, red and violet also has a six-step shading ramp (`--color-<name>-0` to `-5`, dark to light, hue-shifted about 12° per step). Each ramp contains its base token unchanged. Ramp steps are for sprites, planets and dithered canvases, not text. Stars use a sixth, stellar ramp (`--color-star-0` to `-5`: deep red, orange, yellow, white, pale blue, blue-white, ordered by temperature rather than brightness). `pnpm palette` exports all six ramps as `design/three-body-cv.gpl` for Aseprite.
 
 Type:
 

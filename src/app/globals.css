@@ -55,6 +55,18 @@
   --color-violet-4: #bd7eec;
   --color-violet-5: #e5bbf2;
 
+  /*
+   * Stellar ramp: blackbody colours by temperature, cool → hot (deep red, orange, yellow,
+   * white, pale blue, blue-white). Stars snap their colour to the nearest step, so they stay
+   * on-palette. Ordered by temperature, not brightness; star-2 is the gold token.
+   */
+  --color-star-0: #e8452c;
+  --color-star-1: #ff8a3d;
+  --color-star-2: #ffd93d;
+  --color-star-3: #fff6e8;
+  --color-star-4: #bfd6ff;
+  --color-star-5: #7fa8ff;
+
   --font-pixel: var(--font-press-start), monospace;
   --font-terminal: var(--font-vt323), monospace;
   --font-mono: var(--font-space-mono), ui-monospace, monospace;

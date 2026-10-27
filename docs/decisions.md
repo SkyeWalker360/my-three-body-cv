@@ -25,3 +25,11 @@ the manifest that don't exist yet. Its Phase 6 box stays unticked.
 Merging needs Luke's approval, so each feature is its own branch built on the previous one, with
 its PR based on that branch. Merge them in order, oldest first; GitHub retargets the next PR to
 `main` as each one merges.
+
+## D5. Stellar ramp colours
+
+`--color-star-0..5` = #e8452c, #ff8a3d, #ffd93d, #fff6e8, #bfd6ff, #7fa8ff, taken from the
+Three-Body Pixel Lab preview. The yellow step is the gold token itself. It's ordered by
+temperature, not brightness, so the brightness test only covers the five shading ramps; a
+separate test checks the ramp gets bluer at every step. Retune by eye in Aseprite as with the
+other ramps.
