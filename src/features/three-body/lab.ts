@@ -22,8 +22,13 @@ export const SIM_SPEED = 0.75;
 export const MAX_STEPS_PER_FRAME = 50;
 export const KICK_DV = 0.075;
 export const SHADOW_DELTA = 1e-7;
-/** A body beyond this radius has escaped; the preset is reloaded so nothing leaves the screen. */
-export const ESCAPE_RADIUS = 3.5;
+/** World units shown from the centre to the nearest canvas edge (scale is 1/4 of the short side). */
+export const VISIBLE_RADIUS = 2;
+/**
+ * A body past this radius is about to leave the screen; the preset is reloaded. Chaotic runs
+ * (and the equal-mass Lagrange triangle, which is unstable) eventually break up this way.
+ */
+export const ESCAPE_RADIUS = 1.9;
 const TRAIL_LENGTH = 80;
 const TELEMETRY_EVERY = 6;
 
@@ -60,6 +65,8 @@ export class Lab {
   private trailHead = 0;
   private trailCount = 0;
   private accumulator = 0;
+  /** Simulated time since the last preset load; read by tests. */
+  simTime = 0;
   private frame = 0;
   private rafId = 0;
   private last = 0;
@@ -128,7 +135,13 @@ export class Lab {
     this.trailHead = 0;
     this.trailCount = 0;
     this.accumulator = 0;
+    this.simTime = 0;
     if (this.shadow) this.spawnShadow();
+  }
+
+  /** Largest body distance from the barycentre; read by tests. */
+  radius(): number {
+    return maxRadius(this.state);
   }
 
   private spawnShadow(): void {
@@ -173,6 +186,7 @@ export class Lab {
       step(this.state);
       if (this.shadow) step(this.shadow);
       this.accumulator -= dt;
+      this.simTime += dt;
       steps++;
     }
     // Drop time we could not simulate rather than spiralling.
@@ -225,7 +239,7 @@ export class Lab {
     const { ctx, palette } = this;
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
-    const scale = Math.min(w, h) * 0.25;
+    const scale = Math.min(w, h) / (2 * VISIBLE_RADIUS);
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2);
     const colors = [palette.cyan, palette.gold, palette.red];
