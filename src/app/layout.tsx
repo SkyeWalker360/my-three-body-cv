@@ -21,7 +21,9 @@ const spaceMono = Space_Mono({
   weight: ['400', '700'],
   style: ['normal', 'italic'],
   subsets: ['latin'],
-  display: 'swap',
+  // Body copy: 'optional' avoids a late swap repaint of the hero paragraph, which is the LCP
+  // element. The font is preloaded, so it is almost always ready for the first paint anyway.
+  display: 'optional',
   variable: '--font-space-mono',
 });
 

@@ -53,6 +53,20 @@ On NixOS, run everything through
 `nix shell nixpkgs#nodejs_22 nixpkgs#pnpm nixpkgs#chromium` and set
 `PLAYWRIGHT_CHROMIUM_PATH=$(command -v chromium)` for the e2e tests.
 
+## Budgets (measured 27 Oct 2026, Lighthouse 12, local static build)
+
+| Check                                 | Mobile          | Desktop         | Brief target |
+| ------------------------------------- | --------------- | --------------- | ------------ |
+| Performance                           | 98              | 100             | —            |
+| Accessibility / Best Practices / SEO  | 100 / 100 / 100 | 100 / 100 / 100 | ≥ 95         |
+| LCP                                   | 2.0–2.1 s       | 0.6 s           | < 2.5 s      |
+| CLS                                   | 0               | 0               | < 0.1        |
+| Initial JS (gzipped, modern browsers) | ~140 KB         | ~140 KB         | ~100 KB      |
+
+The JS budget isn't met: React DOM and the Next.js runtime alone are ~114 KB gzipped, and
+the site's own initial code is ~25 KB (every Easter egg loads later). Meeting ~100 KB would
+mean leaving Next.js/React, which needs Luke's sign-off.
+
 ## Open content
 
 The Noctus Umbra acts in `content/noctus/` ship as playable drafts. Luke rewrites the prose,
