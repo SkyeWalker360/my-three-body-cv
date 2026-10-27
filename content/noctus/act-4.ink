@@ -1,48 +1,51 @@
-// DRAFT SCAFFOLD — structure and DC mechanics only.
-// TODO(luke): rewrite the prose from your Season 4 notes before shipping.
+// Adapted from "Noctus Umbra - Season Four - Into The Pitt". The notes stop before the Pit,
+// so the act ends as the party heads for Wroat.
 INCLUDE _shared.ink
 
-ACT IV: SUNFLOWER DAY AND INTO THE PIT #heading
--> guildhall
+ACT IV: SUNFLOWER DAY #heading
+-> death_day
 
-=== guildhall ===
-Year 298 AoM. Rasneth opens Trevor's secret box: an Owlbear Press front page about Sunflower Day.
-Jasmine's secret admirer left a book cipher.
-* [Row 1, Shelf 1, Book 1]
-    ~ passes = passes + 1
-    The right book. The message names the Helianthus family.
-* [Row 3, Shelf 2, Book 7]
-    ~ fails = fails + 1
-    A cookbook. You try again and find the right shelf eventually.
-- -> library
+=== death_day ===
+It is Rasneth's death day. He lays out an old copy of The Owlbear Press: "Sunflower Day: Multiple Killed At Sunflower Raceway", Year 284 AoM.
+Rasneth, Trevor and Abbigail were investigating the Helianthus family for hiding a vampire during the Masquerade Race Parade. Rasneth still doesn't remember why he jumped in front of the Inkdragon.
+-> day_off
 
-=== library ===
-In the damaged Wizard Tome library, something is wrong.
-* [Look closer (Insight, DC 15)]
+=== day_off ===
+Captain Bell takes a day off and takes you with her: a rock house, then Eve's Apple.
+"Drow, werewolves and now bombings around the city. I thought I left the adventuring life behind."
+"I don't remember that raid because I died. Don't remember much but a sword right through the heart."
+She presses her Contract-Coin into Cav's hand. Find Trevor.
+-> downtime
+
+=== downtime ===
+A letter arrives for Jasmine, from a secret admirer: Row = 1 \| Shelf = 1 \| Book = 1.
+Cav wakes from a nightmare. "Her emerald green eyes wide open, staring at you, enraged."
+A moth lands on Dahlea's sill.
+* [Read the omen (Insight, DC 15)]
     { check("Insight", 15):
-        A dead moth. Someone was here before you.
+        A foreboding feeling creeps over you. Something is coming for the guild.
     - else:
-        You miss the dead moth on the sill.
+        Just a moth. Probably.
     }
-- -> wall
-
-=== wall ===
-A carriage drawn by four black warhorses races toward Nightshadow on the Heatherhaven Wall.
-* [Dive for Nightshadow (Acrobatics, DC 13)]
+- Arzhela shows Nightshadow the city, and Nightshadow climbs the Heatherhaven Wall.
+* [Follow her up (Acrobatics, DC 13)]
     { check("Acrobatics", 13):
-        You roll clear with Nightshadow in your arms.
+        You reach the top beside her.
     - else:
-        You both tumble, bruised but alive.
+        You scrape up the wall well behind her.
     }
-- -> rail
+- A carriage drawn by four black horses thunders straight at Nightshadow.
+* [Pull her clear (DEX save, DC 15)]
+    { check("DEX", 15):
+        You get her out of the way.
+    - else:
+        You both go sprawling, bruised but alive.
+    }
+- -> lotus
 
-=== rail ===
-Lotus Helianthus steals the Silver Books. You board the Lightning Rail for Wroat.
-* [Fight the Bagman at the WinBag (Athletics, DC 15)]
-    { check("Athletics", 15):
-        The Bagman goes over the rail.
-    - else:
-        The Bagman escapes into the fog.
-    }
-- The Sewer Deep waits beneath the Masquerade Race Parade.
--> recap
+=== lotus ===
+Lotus Helianthus visits the guild hall to warn you: stay out of Wroat.
+Then he leaves for the Lion's Ward police to take the silver books. Captain Bell stands in his way, and he nearly kills her.
+* [Make for Wroat]
+    Trevor is hunting the head of the Kathros in Wroat's Sewer Deep, the Hub. Into the Pit is still to be written.
+- -> recap

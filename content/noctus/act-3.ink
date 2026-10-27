@@ -1,5 +1,4 @@
-// DRAFT SCAFFOLD — structure and DC mechanics only.
-// TODO(luke): rewrite the prose from your Season 3 notes before shipping.
+// Adapted from "Noctus Umbra - Season Three - Family Duty Crimson".
 INCLUDE _shared.ink
 
 VAR round_dc = 10
@@ -10,73 +9,91 @@ ACT III: THE MOTHER'S MIRROR AND THE FEYWILD FISSURE #heading
 -> fort
 
 === fort ===
-Past Fort Jaegar, a dire troll's cave waits.
-* [Search the cave (Perception, DC 12)]
+At Fort Yeagar, Zane Boulderdown and Staff Sergeant Ulric Glorybluff send you into the Wildlands, toward the changeling Village Tree.
+* [Watch the road (Perception, DC 12)]
     { check("Perception", 12):
-        You recover three broken sets of ODM gear.
+        You notice the arm, and the dire troll beside it, before it notices you. The broken ODM gear is yours.
     - else:
-        You leave with nothing but the smell.
+        The dire troll jumps you.
     }
-- At the Changeling Village Tree, First Brother Qin bars the elevator.
-* [Answer truthfully in the Zone of Truth (CHA, DC 16)]
+- At the tree, Qin and the twins Mars and Tairs cast zone of truth on the party.
+* [Answer truthfully (CHA save, DC 16)]
     { check("CHA", 16):
-        Qin nods. Elder Golding will see you.
+        You choose your words, and they are all true.
     - else:
-        Qin hesitates, then lets you pass under watch.
+        The truth spills out.
     }
-- -> mirror
+- "Are you the group Noctus Umbra?" Elder Golding takes you in.
+-> mirror
 
 === mirror ===
-Cavalier enters the humid chamber of The Mother's Mirror. Water rises with every round.
+Beneath the Changeling Temple, water drips from the Mother's Heart Crystal into a pool: the Mother's Mirror. Cav steps in and the room grows humid.
 -> rising
 
 = rising
 { round_dc > 14:
-    -> pool
+    -> reflections
 }
-+ [Hold on (CON save, DC {round_dc})]
++ [Endure (CON save, DC {round_dc})]
     { check("CON", round_dc):
         You hold.
     - else:
-        You choke, but hold.
+        The pool beckons.
     }
     ~ round_dc = round_dc + 2
     -> rising
 
-= pool
-* [Dive into the deep blue pool (WIS save, DC 16)]
+= reflections
+Two reflections rise from the water: Cav as a frightened young boy, and Cav as a stern grey changeling.
+"We want to go home, this place, look at what it's done to us."
+"We have been concentrating for far too long on what we are but not who we are. Who are we?"
+Together: "What do we want?"
+* [Face them (WIS save, DC 16)]
     { check("WIS", 16):
-        Two reflections ask in unison, "What do we want?" You answer, and your true face returns.
+        You blink, and your reflection is gone. You pass out. Twelve hours later, you wake with your real face.
     - else:
-        The reflections fade, unanswered, but you surface.
+        The reflections fade, unanswered, and you surface.
     }
-- -> dreadnought
+- -> feywild
 
-=== dreadnought ===
-A Plane Shift machine drags you into an Astral Dreadnought's demiplane. Four small Dragonshards must be charged in one round: three successes before two failures.
--> charge
+=== feywild ===
+A fissure into the Feywild opens. You save a firbolg father and son, and in the Fey city Cav learns that Kassey is missing. He finds her diary.
+Demons, a dark fog over Ywain, a Nabassu. In the Grand Hall the trail leads to Keaya.
+* [Press for news of Keaya (Persuasion, DC 18)]
+    { check("Persuasion", 18):
+        "The root of the corruption is in Callian."
+    - else:
+        Nobody will talk, but every road points to Callian.
+    }
+- -> callian
 
-= charge
+=== callian ===
+Callian is sealed behind a wall of force. You break through, find Kassey sheltering beneath a temple, and Ness frees the Sword Wraith Commander, who drops the Sworn Pactbreaker.
+At the top of the tower, past a Wastrilith, a Plane Shift machine hums. It drags you toward an Astral Dreadnought. "They are not meant to beat it. Run."
+Three successes before two failures, all in a single round: power the small Dragonshards with third-level spell slots.
+-> teleporter
+
+= teleporter
 { charges >= 3:
     -> escaped
 }
 { misses >= 2:
-    -> stranded
+    -> lost
 }
-+ [Charge a Dragonshard with a 3rd-level slot (Arcana, DC 14)]
-    { check("Arcana", 14):
++ [Pour a third-level slot into a Dragonshard (Arcana, DC 15)]
+    { check("Arcana", 15):
         ~ charges = charges + 1
-        The shard hums. {charges} of 3.
+        The shard flares. {charges} of 3.
     - else:
         ~ misses = misses + 1
         The shard sputters. {misses} of 2 failures.
     }
-    -> charge
+    -> teleporter
 
 === escaped ===
-The teleporter tears you back to Callian, where you slay the Sibriex.
+The machine tears you back to Callian, ahead of the Dreadnought's jaws. The Sibriex waits. You end it.
 -> recap
 
-=== stranded ===
-The teleporter fails. Cavalier and Seff roll to see who loses a loved one before you claw your way back to Callian.
+=== lost ===
+The machine fails. Seff and Cav each roll a d20, and whoever rolls lowest loses a loved one to the astral sea. You claw your way back to Callian and end the Sibriex.
 -> recap

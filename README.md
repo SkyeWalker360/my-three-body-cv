@@ -67,8 +67,12 @@ The JS budget was raised from ~100 KB to ~150 KB on 27 Oct 2026 (Luke's sign-off
 and the Next.js runtime alone are ~114 KB gzipped, and the site's own initial code is ~25 KB
 (every Easter egg loads later).
 
-## Open content
+## Noctus Umbra content
 
-The Noctus Umbra acts in `content/noctus/` ship as playable drafts. Luke rewrites the prose,
-and the dice modifiers and mine-table bands in `src/features/noctus/dice.ts`, from the
-campaign notes (marked `TODO(luke)`).
+The four acts in `content/noctus/` are adapted from Luke's campaign notes (Season Two's
+Crescent Mountain tomb, Sto-Side Quest 1, Season Three, and Season Four up to the Pit), keeping
+the notes' names, DCs and lines. Two gaps in the notes are filled and flagged in
+`src/features/noctus/dice.ts`: there are no character-sheet values, so every check uses +5
+(`MODIFIER_OVERRIDES` takes real values later), and the Mining Rewards table skips 81–89, which
+counts as Platinum. Act I ends at the uprising and Act IV before Into the Pit, where the notes
+stop.

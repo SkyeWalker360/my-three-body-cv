@@ -1,8 +1,10 @@
 // Shared by every act. Included at the top of each act file.
-// roll(stat, dc) rolls d20 + modifier against the DC and returns true on a pass;
-// the runner prints the roll. rollD100Mine() returns the mine-shift haul.
+// roll(stat, dc): d20 + party modifier against the DC, true on a pass.
+// rollD100Mine(): the Mining Rewards haul. contest(foeBonus, advantage): one tug-of-war pull.
+// The runner prints every roll.
 EXTERNAL roll(stat, dc)
 EXTERNAL rollD100Mine()
+EXTERNAL contest(foeBonus, advantage)
 
 VAR passes = 0
 VAR fails = 0

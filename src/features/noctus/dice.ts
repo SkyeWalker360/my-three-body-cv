@@ -4,28 +4,17 @@
 export type Rng = () => number;
 
 /**
- * Check modifiers by stat or skill name. Game configuration, not CV content.
- * TODO(luke): replace with the party's real sheet values from the campaign notes.
+ * The campaign notes record DCs but no character-sheet values, so every party check uses one
+ * modifier: +5, a proficient level 7–8 adventurer (+3 proficiency, +2 ability). Game
+ * configuration, not CV content.
  */
-export const MODIFIERS: Record<string, number> = {
-  STR: 3,
-  DEX: 2,
-  CON: 3,
-  INT: 1,
-  WIS: 2,
-  CHA: 1,
-  Acrobatics: 4,
-  Arcana: 3,
-  Athletics: 5,
-  History: 2,
-  Insight: 3,
-  Investigation: 3,
-  Perception: 4,
-  Spirit: 5,
-};
+export const PARTY_MODIFIER = 5;
+
+/** Per-stat overrides, for when real sheet values are added. Empty: every check uses +5. */
+export const MODIFIER_OVERRIDES: Record<string, number> = {};
 
 export function modifierFor(stat: string): number {
-  return MODIFIERS[stat] ?? 0;
+  return MODIFIER_OVERRIDES[stat] ?? PARTY_MODIFIER;
 }
 
 export function rollDie(sides: number, rng: Rng): number {
@@ -55,17 +44,18 @@ export function describeCheck(r: CheckResult): string {
 }
 
 /**
- * Mine-shift haul table (d100). Only "96+ Dragonshards" is fixed by the campaign notes.
- * TODO(luke): confirm the other bands against the Crescent Mines notes.
+ * Mining Rewards (d100), from the Season Two notes: 1–10 Stone, 11–20 Iron, 21–30 Copper,
+ * 31–50 Silver, 51–70 Gold, 71–80 Platinum, 90–95 Gems, 96+ Dragon Shards. The notes skip
+ * 81–89; it is treated as Platinum here.
  */
 export const MINE_TABLE: Array<{ min: number; find: string }> = [
-  { min: 96, find: 'Dragonshards' },
+  { min: 96, find: 'Dragon Shards' },
   { min: 90, find: 'Gems' },
-  { min: 82, find: 'Platinum' },
-  { min: 70, find: 'Gold' },
-  { min: 55, find: 'Silver' },
-  { min: 38, find: 'Copper' },
-  { min: 20, find: 'Iron' },
+  { min: 71, find: 'Platinum' },
+  { min: 51, find: 'Gold' },
+  { min: 31, find: 'Silver' },
+  { min: 21, find: 'Copper' },
+  { min: 11, find: 'Iron' },
   { min: 1, find: 'Stone' },
 ];
 
@@ -73,4 +63,29 @@ export function rollD100Mine(rng: Rng): { roll: number; find: string } {
   const roll = rollDie(100, rng);
   const row = MINE_TABLE.find((r) => roll >= r.min)!;
   return { roll, find: row.find };
+}
+
+export type ContestResult = {
+  ours: number;
+  theirs: number;
+  /** The second d20 when rolling with advantage, else null. */
+  other: number | null;
+  pass: boolean;
+};
+
+/**
+ * One pull in Sto's soul tug-of-war: our d20 + modifier (with advantage if earned) against a
+ * spirit's d20 + foeBonus. Ties go to the side holding the chain: us.
+ */
+export function resolveContest(foeBonus: number, advantage: boolean, rng: Rng): ContestResult {
+  const a = rollDie(20, rng);
+  const b = advantage ? rollDie(20, rng) : null;
+  const ours = Math.max(a, b ?? 0) + PARTY_MODIFIER;
+  const theirs = rollDie(20, rng) + foeBonus;
+  return { ours, theirs, other: b === null ? null : Math.min(a, b), pass: ours >= theirs };
+}
+
+export function describeContest(r: ContestResult, foeBonus: number): string {
+  const adv = r.other === null ? '' : ' (advantage)';
+  return `🎲 Tug: you ${r.ours}${adv} vs spirit ${r.theirs} (d20 + ${foeBonus}) — ${r.pass ? 'YOU PULL' : 'THEY PULL'}`;
 }

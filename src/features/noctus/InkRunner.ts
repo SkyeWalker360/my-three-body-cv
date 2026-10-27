@@ -5,7 +5,14 @@
 import { Story } from 'inkjs';
 import { line, type Line } from '@/lib/terminal';
 import { ACTS } from './acts';
-import { describeCheck, resolveCheck, rollD100Mine, type Rng } from './dice';
+import {
+  describeCheck,
+  describeContest,
+  resolveCheck,
+  resolveContest,
+  rollD100Mine,
+  type Rng,
+} from './dice';
 
 /** Resolves to the compiled story JSON for an act. */
 export type StoryLoader = (act: number) => Promise<string>;
@@ -108,6 +115,16 @@ export class InkRunner {
         const result = rollD100Mine(this.rng);
         this.pending.push(line(`🎲 Mine shift: d100 (${result.roll}) — ${result.find}`, 'roll'));
         return result.find;
+      },
+      false,
+    );
+    story.BindExternalFunction(
+      'contest',
+      (foeBonus: unknown, advantage: unknown) => {
+        const bonus = Number(foeBonus);
+        const result = resolveContest(bonus, Boolean(advantage), this.rng);
+        this.pending.push(line(describeContest(result, bonus), 'roll'));
+        return result.pass;
       },
       false,
     );
