@@ -240,34 +240,34 @@ A phase is done when every box under it is ticked, and phases ship in order.
 
 **Phase 1: Foundation**
 
-- [ ] Repo scaffolded per the structure above; CI is green; the site deploys statically
-- [ ] `cv-manifest.json` holds every fact from the current CV and passes Zod validation
-- [ ] Name, title, contact links and a working PDF download are visible without scrolling at 1280×720 and 390×844
-- [ ] Page title, meta description, Open Graph image and JSON-LD `Person` are present
-- [ ] Lighthouse is 95 or higher for Accessibility, Best Practices and SEO; the page reads fully with JS disabled
+- [x] Repo scaffolded per the structure above; CI is green; the site deploys statically
+- [x] `cv-manifest.json` holds every fact from the current CV and passes Zod validation
+- [x] Name, title, contact links and a working PDF download are visible without scrolling at 1280×720 and 390×844
+- [x] Page title, meta description, Open Graph image and JSON-LD `Person` are present
+- [x] Lighthouse is 95 or higher for Accessibility, Best Practices and SEO; the page reads fully with JS disabled
 
 **Phase 2: Three-body lab**
 
-- [ ] All 5 presets run with zero net momentum and stay on screen for 10 minutes
-- [ ] The energy-drift test passes; the HUD shows K, U, E and |ΔE / E₀|
-- [ ] Speed is the same at 60 Hz and 120 Hz; the simulation runs in a worker when supported
+- [x] All 5 presets run with zero net momentum and stay on screen for 10 minutes
+- [x] The energy-drift test passes; the HUD shows K, U, E and |ΔE / E₀|
+- [x] Speed is the same at 60 Hz and 120 Hz; the simulation runs in a worker when supported
 
 **Phase 3: Cursor**
 
-- [ ] 16 sprite frames, pooled particles, click burst
-- [ ] Off on touch devices and with reduced motion, and the native cursor returns
+- [x] 16 sprite frames, pooled particles, click burst
+- [x] Off on touch devices and with reduced motion, and the native cursor returns
 
 **Phase 4: K.A.R.L. and Noctus Umbra**
 
-- [ ] Dialog meets the focus, Escape and `aria-live` requirements; axe reports no violations
-- [ ] All commands work; answers come from the manifest; user input is rendered as text
-- [ ] All 4 acts reach `END`; rolls are checked against their DCs; save and continue work
+- [x] Dialog meets the focus, Escape and `aria-live` requirements; axe reports no violations
+- [x] All commands work; answers come from the manifest; user input is rendered as text
+- [x] All 4 acts reach `END`; rolls are checked against their DCs; save and continue work
 
 **Phase 5: Shooter and boss**
 
-- [ ] Clicking ENGAGE from the footer always produces shootable asteroids (no off-screen soft-lock)
-- [ ] Keyboard controls match the on-screen label; Space doesn't scroll the page
-- [ ] The boss runs 3 phases; victory restores the DOM; a replay works without reloading
+- [x] Clicking ENGAGE from the footer always produces shootable asteroids (no off-screen soft-lock)
+- [x] Keyboard controls match the on-screen label; Space doesn't scroll the page
+- [x] The boss runs 3 phases; victory restores the DOM; a replay works without reloading
 
 Out of scope for now:
 
@@ -280,4 +280,4 @@ Resolved from the 2026 CV (27 Oct):
 - **Contact on the site:** email lukempgorry@gmail.com, [LinkedIn](https://www.linkedin.com/in/luke-gorry-951502239) and [GitHub](https://github.com/SkyeWalker360). Phone number and street address stay off the site, and `/cv.pdf` is a web version without them.
 - **NDT card:** shows the course period, March – May 2026.
 - **Lab card:** replaced by the Multi-Node Homelab project (NixOS, Proxmox, 2025 – present). Alpine and Zorin OS are dropped.
-- **Still open:** hosting choice and custom domain.
+- **Hosting:** GitHub Pages at https://skyewalker360.github.io/my-three-body-cv/, deployed from `main` by CI. No custom domain.
