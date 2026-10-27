@@ -61,11 +61,11 @@ On NixOS, run everything through
 | Accessibility / Best Practices / SEO  | 100 / 100 / 100 | 100 / 100 / 100 | ≥ 95         |
 | LCP                                   | 2.0–2.1 s       | 0.6 s           | < 2.5 s      |
 | CLS                                   | 0               | 0               | < 0.1        |
-| Initial JS (gzipped, modern browsers) | ~140 KB         | ~140 KB         | ~100 KB      |
+| Initial JS (gzipped, modern browsers) | ~140 KB         | ~140 KB         | ≤ ~150 KB    |
 
-The JS budget isn't met: React DOM and the Next.js runtime alone are ~114 KB gzipped, and
-the site's own initial code is ~25 KB (every Easter egg loads later). Meeting ~100 KB would
-mean leaving Next.js/React, which needs Luke's sign-off.
+The JS budget was raised from ~100 KB to ~150 KB on 27 Oct 2026 (Luke's sign-off): React DOM
+and the Next.js runtime alone are ~114 KB gzipped, and the site's own initial code is ~25 KB
+(every Easter egg loads later).
 
 ## Open content
 

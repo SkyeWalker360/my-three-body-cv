@@ -182,7 +182,7 @@ The stack is fixed: change it only with Luke's sign-off. Everything else in this
 Budgets:
 
 - **Speed:** LCP under 2.5 s, CLS under 0.1 and INP under 200 ms on a mid-range phone.
-- **JavaScript:** the CV page loads at most about 100 KB of gzipped JS before any interaction. Each Easter egg loads with `next/dynamic` (`ssr: false`) on interaction or idle.
+- **JavaScript:** the CV page loads at most about 150 KB of gzipped JS before any interaction (raised from 100 KB on 27 Oct 2026, with Luke's sign-off: React DOM and the Next.js runtime alone are about 114 KB). The site's own initial code stays at or under about 30 KB. Each Easter egg loads with `next/dynamic` (`ssr: false`) on interaction or idle.
 - **Lighthouse:** 95 or higher for Accessibility, Best Practices and SEO.
 
 Rules for every PR:
