@@ -32,6 +32,17 @@ const lagrange = [0, 1, 2].map((k) => {
   };
 });
 
+// Close pair: a tight binary (1 and 0.8, separation 0.3) with a 0.5 star on a circular orbit
+// at 1.4. The outer relative speed sqrt(M/d) is split between the pair and the star so the net
+// momentum is zero. engine/physics/presets.go uses the same numbers.
+const PAIR = { m1: 1, m2: 0.8, m3: 0.5, a: 0.3, d: 1.4 };
+const pairInner = PAIR.m1 + PAIR.m2;
+const pairTotal = pairInner + PAIR.m3;
+const pairVrel = Math.sqrt(pairInner / PAIR.a);
+const pairVout = Math.sqrt(pairTotal / PAIR.d);
+const pairV3 = (pairVout * pairInner) / pairTotal;
+const pairVin = (-pairVout * PAIR.m3) / pairTotal;
+
 export const PRESETS: Preset[] = [
   {
     name: 'Figure-8',
@@ -82,5 +93,20 @@ export const PRESETS: Preset[] = [
     velocities: [0.1, 0.6, -0.3, -0.4, 0.2, -0.2],
     source: 'Prototype values, designed for chaos',
     chaotic: true,
+  },
+  {
+    name: 'Close pair',
+    short: 'PAIR',
+    masses: [PAIR.m1, PAIR.m2, PAIR.m3],
+    positions: [(-PAIR.a * PAIR.m2) / pairInner, 0, (PAIR.a * PAIR.m1) / pairInner, 0, PAIR.d, 0],
+    velocities: [
+      0,
+      (-pairVrel * PAIR.m2) / pairInner + pairVin,
+      0,
+      (pairVrel * PAIR.m1) / pairInner + pairVin,
+      0,
+      pairV3,
+    ],
+    source: 'Hierarchical triple: a close binary and a distant third star',
   },
 ];

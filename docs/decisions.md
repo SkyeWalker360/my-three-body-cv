@@ -33,3 +33,18 @@ Three-Body Pixel Lab preview. The yellow step is the gold token itself. It's ord
 temperature, not brightness, so the brightness test only covers the five shading ramps; a
 separate test checks the ramp gets bluer at every step. Retune by eye in Aseprite as with the
 other ramps.
+
+## D6. Engine physics: defaults and the Close pair preset
+
+- Engine step dt = 1e-3 with Yoshida-4 (the TypeScript fallback keeps Verlet at 5e-4). Figure-8
+  drift after 10⁵ steps is far under the 10⁻⁶ target. The unequal-mass orbit keeps its fine
+  1e-5 step and no softening, as in TypeScript.
+- The planet and supernova fragments are massless test particles: they feel the stars but never
+  move them, so energy and momentum checks only cover the stars.
+- The sixth preset, "Close pair", is a binary (1 and 0.8 at separation 0.3) with a 0.5 star on a
+  circular orbit at 1.4. The Pixel Lab's version flung the outer star off screen within 3 time
+  units, because it gave the outer star the full circular speed and the pair extra recoil; here
+  the relative speed √(M/d) is split between them. It was added to the TypeScript presets too,
+  so both solvers offer the same six and the parity fixture covers all of them.
+- Parity: both solvers integrate every preset to t = 0.5 and must agree within 1e-4 in position
+  (1e-3 in velocity). They use different integrators, so bit-for-bit equality isn't expected.

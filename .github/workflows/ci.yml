@@ -19,6 +19,16 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: engine/go.mod
+          cache-dependency-path: engine/go.mod
+      - name: Go engine (format, vet, test)
+        working-directory: engine
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go test ./...
       - run: pnpm install --frozen-lockfile
       - run: pnpm content
       - run: pnpm lint
