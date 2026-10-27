@@ -97,3 +97,37 @@ test('ENGAGE produces shootable asteroids and Space does not scroll', async ({
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-destructible]').first()).not.toHaveCSS('visibility', 'hidden');
 });
+
+test('the ship cursor only replaces the native cursor with a mouse', async ({ page, isMobile }) => {
+  await page.goto('/');
+  if (isMobile) {
+    await page.touchscreen.tap(200, 400);
+    await page.waitForTimeout(500);
+    await expect(page.locator('html')).not.toHaveClass(/ship-cursor/);
+  } else {
+    // The cursor loads on idle, then activates on the next mouse move.
+    let x = 400;
+    await expect(async () => {
+      x += 10;
+      await page.mouse.move(x, 300);
+      await expect(page.locator('html')).toHaveClass(/ship-cursor/, { timeout: 200 });
+    }).toPass({ timeout: 5000 });
+    // The native cursor comes back while K.A.R.L.'s modal is open.
+    await page.getByRole('button', { name: 'K.A.R.L.' }).click();
+    await expect(page.locator('html')).not.toHaveClass(/ship-cursor/);
+  }
+});
+
+test('the shooter can be replayed without reloading', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'The shooter needs a keyboard.');
+  await page.goto('/');
+  const launch = page.getByRole('button', { name: /engage weapons/i });
+  for (let run = 0; run < 2; run++) {
+    await launch.click();
+    await expect(page.getByRole('status')).toContainText(/\d+ CV blocks became asteroids/);
+    await expect(page.locator('[data-destructible][style*="hidden"]').first()).toBeAttached();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-destructible][style*="hidden"]')).toHaveCount(0);
+    await expect(launch).toBeEnabled();
+  }
+});
