@@ -13,6 +13,7 @@ export const COMMANDS = [
   'clear',
   'exit',
   'karr',
+  'lab',
 ] as const;
 export type Command = (typeof COMMANDS)[number];
 

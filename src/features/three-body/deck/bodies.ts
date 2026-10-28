@@ -53,7 +53,8 @@ export type DeckBody = {
   civilisation?: number;
 };
 
-export const STAR_NAMES = ['Star A', 'Star B', 'Star C'] as const;
+/** The same names the lab's event messages use. */
+export const STAR_NAMES = ['Star 1', 'Star 2', 'Star 3'] as const;
 
 /** Physical radius of star `kind` in `phase`, given its current engine pixel radius. */
 export function trueStarRadius(kind: number, phase: number, radiusPx: number, mass: number) {

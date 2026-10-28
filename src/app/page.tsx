@@ -3,7 +3,7 @@ import { Filters } from '@/components/cv/Filters';
 import { Footer } from '@/components/cv/Footer';
 import { Header } from '@/components/cv/Header';
 import { Hero } from '@/components/cv/Hero';
-import { LabPanel } from '@/components/cv/LabPanel';
+import { DeckPanel } from '@/components/cv/DeckPanel';
 import {
   Certifications,
   EducationSection,
@@ -58,7 +58,7 @@ export default function Home() {
           <SkillsAndProjects m={manifest} />
           <EducationSection m={manifest} />
         </Filters>
-        <LabPanel />
+        <DeckPanel />
       </main>
       <Footer person={manifest.person} />
       <script

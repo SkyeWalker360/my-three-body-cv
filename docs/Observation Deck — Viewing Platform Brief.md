@@ -8,8 +8,8 @@
 
 **What this is not:** a flight game. The vessel exists so the viewpoint can be anywhere in the system and move there honestly. Piloting, autopilot scripting and combat are out of scope (see §10, "Later, maybe").
 
-> **Status (28 Oct 2026):** Phases 1 and 2 built. Luke's answers to §9 are recorded there.
-> Implementation choices are in `docs/decisions.md` (D11, D12).
+> **Status (28 Oct 2026):** Phases 1–3 built. Luke's answers to §9 are recorded there.
+> Implementation choices are in `docs/decisions.md` (D11–D13).
 
 ---
 
@@ -177,8 +177,8 @@ If the repo is still a single file, implement the same boundaries as JS modules.
 - **Done when:** an eclipse visibly dims the deck interior, and planet phases match star geometry.
 
 ### Phase 3 — Observatory console
-- [ ] Focus, telescope, body cards, spectrograph, overlays, time control, nav chart.
-- [ ] Remove the Three-Body Lab section; add `/lab`.
+- [x] Focus, telescope, body cards, spectrograph, overlays, time control, nav chart.
+- [x] Remove the Three-Body Lab section; add `/lab`.
 - **Done when:** every old Lab feature is reachable from the console.
 
 ### Phase 4 — Vantages + events

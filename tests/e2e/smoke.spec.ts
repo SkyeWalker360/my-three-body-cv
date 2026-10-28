@@ -132,15 +132,41 @@ test('the shooter can be replayed without reloading', async ({ page, isMobile })
   }
 });
 
-test('the Go engine loads and a star can be aged into a supernova', async ({ page }) => {
+test('the Go engine loads, and on the deck a star ages into a supernova', async ({ page }) => {
   test.setTimeout(30_000);
   const wasm = page.waitForResponse((r) => r.url().endsWith('/engine.wasm'));
   await page.goto('/');
   expect((await wasm).status()).toBe(200);
-  await expect(page.getByText('Running the Go engine')).toBeVisible({ timeout: 10_000 });
-  await page.getByRole('button', { name: 'AGE A STAR' }).click();
-  await expect(page.getByText(/left the main sequence/)).toBeVisible();
-  await expect(page.getByText(/Supernova!/)).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'ENTER THE OBSERVATION DECK' }).click();
+  const dialog = page.getByRole('dialog', { name: 'OBSERVATION DECK' });
+  await expect(dialog.getByText('VANTAGE Above the orbital plane')).toBeVisible({
+    timeout: 10_000,
+  });
+  await dialog.getByRole('button', { name: 'AGE A STAR' }).click();
+  const events = dialog.getByRole('region', { name: 'EVENTS' });
+  await expect(events.getByText(/left the main sequence/)).toBeVisible();
+  await expect(events.getByText(/Supernova!/)).toBeVisible({ timeout: 15_000 });
+  // The console's instruments: a body card and the spectrograph for a star.
+  await dialog.getByRole('button', { name: 'STAR 2', exact: true }).click();
+  await expect(dialog.getByRole('definition').filter({ hasText: 'Yellow dwarf' })).toBeVisible();
+  await expect(dialog.getByText(/peak \d+ nm \(Wien's law\)/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'PAUSE' }).click();
+  await expect(dialog.getByText('TIME paused')).toBeVisible();
+});
+
+test("K.A.R.L.'s /lab opens the deck's plain lab view", async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'K.A.R.L.' }).click();
+  const input = page.getByRole('dialog').getByLabel('K.A.R.L.>');
+  await input.fill('/lab');
+  await input.press('Enter');
+  const deck = page.getByRole('dialog', { name: 'OBSERVATION DECK' });
+  await expect(deck).toBeVisible();
+  await expect(deck.getByRole('button', { name: 'LAB VIEW' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(deck.getByText(/LAB VIEW: the engine/)).toBeVisible();
 });
 
 test('the field scanner opens, logs a specimen from the manifest, and closes on Escape', async ({
@@ -252,8 +278,9 @@ test('the observation deck opens on the calm vantage, reads out in the DOM, and 
     timeout: 10_000,
   });
   await expect(dialog.getByText(/COMPACT SCALE/)).toBeVisible();
-  await expect(dialog.getByText(/NEAREST TO CENTRE Star/)).toBeVisible();
-  await expect(dialog.locator('canvas')).toHaveAttribute('aria-hidden', 'true');
+  await expect(dialog.getByRole('button', { name: 'STAR 1', exact: true })).toBeVisible();
+  for (const c of await dialog.locator('canvas').all())
+    await expect(c).toHaveAttribute('aria-hidden', 'true');
   // The black-hole vantage waits until a star has collapsed into one.
   await expect(dialog.getByRole('button', { name: /Near the black hole/ })).toBeDisabled();
   // Zoom is honest about the field of view.

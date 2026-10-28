@@ -137,6 +137,11 @@ export default function Terminal({ initialCommand }: { initialCommand?: string }
             case 'clear':
               setEntries([]);
               return;
+            case 'lab':
+              append([line('Opening the lab view on the observation deck.', 'muted')]);
+              close();
+              emit('deck:open', { view: 'lab' });
+              return;
             case 'karr':
               if (current === 'rpg') {
                 append([line('Finish or /exit the campaign first.', 'muted')]);

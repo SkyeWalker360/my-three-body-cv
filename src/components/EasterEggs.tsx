@@ -30,7 +30,7 @@ export default function EasterEggs() {
   const [shooter, setShooter] = useState(false);
   const [scanner, setScanner] = useState(false);
   const [inspection, setInspection] = useState(false);
-  const [deck, setDeck] = useState(false);
+  const [deck, setDeck] = useState<{ view?: 'deck' | 'lab' } | null>(null);
 
   useEffect(() => {
     const load = () => {
@@ -50,7 +50,7 @@ export default function EasterEggs() {
     const offShooter = on('shooter:launch', () => setShooter(true));
     const offScanner = on('scanner:open', () => setScanner(true));
     const offInspection = on('inspection:toggle', () => setInspection(true));
-    const offDeck = on('deck:open', () => setDeck(true));
+    const offDeck = on('deck:open', (d) => setDeck((v) => v ?? d));
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'm' && e.key !== 'M') return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || isTyping(e.target)) return;
@@ -77,7 +77,7 @@ export default function EasterEggs() {
       {shooter && <ShooterOverlay autoStart />}
       {scanner && <Scanner />}
       {inspection && <Inspection />}
-      {deck && <Deck />}
+      {deck && <Deck initialView={deck.view} />}
     </>
   );
 }

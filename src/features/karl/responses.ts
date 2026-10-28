@@ -18,6 +18,7 @@ export function helpLines(): Line[] {
     line('/contact  How to reach Luke'),
     line('/core     What powers this ship'),
     line('/noctus   Play the Noctus Umbra campaign'),
+    line('/lab      Open the plain lab view on the observation deck'),
     line('/clear    Clear the log'),
     line('/exit     Leave the current mode, or close K.A.R.L.'),
     line('Or just ask: "what did Luke do at GEN318?", "homelab", "education".', 'muted'),

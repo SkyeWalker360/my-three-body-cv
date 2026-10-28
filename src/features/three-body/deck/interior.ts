@@ -45,11 +45,10 @@ export function drawGlass(
   light: Light,
   offset: { x: number; y: number },
 ) {
-  if (light.level < 0.5) return;
-  const tone = P(
-    STELLAR_TONES[Math.max(0, Math.min(5, light.colourClass))]![light.level > 0.8 ? 3 : 4]!,
-  );
-  for (let i = 0; i < 28; i++) {
+  if (light.level < 0.65) return;
+  // The class's darkest tone: dust should catch the light, not pass for stars.
+  const tone = P(STELLAR_TONES[Math.max(0, Math.min(5, light.colourClass))]![4]!);
+  for (let i = 0; i < 14; i++) {
     const hx = Math.imul(i + 1, 2654435761) >>> 0;
     const hy = Math.imul(i + 7, 2246822519) >>> 0;
     const x = SIDE + 2 + (hx % Math.max(1, W - 2 * SIDE - 4)) + Math.round(offset.x / 2);
