@@ -3,10 +3,12 @@ export const CELLS = 12;
 const CORE = 2;
 const TRAIL = 6;
 export const SWEEP_SECONDS = 1;
+/** Faster sweep while K.A.R.L.'s host star is critical (the brief allows 0.4–1.2 s). */
+export const CRITICAL_SWEEP_SECONDS = 0.45;
 
 /** Brightness (0–1) of each cell at time t: a 2-cell core sweeping with a fading trail. */
-export function larsonLevels(t: number): number[] {
-  const phase = (t / SWEEP_SECONDS) % 2;
+export function larsonLevels(t: number, sweep = SWEEP_SECONDS): number[] {
+  const phase = (t / sweep) % 2;
   const forward = phase < 1;
   const travel = CELLS - CORE;
   const head = Math.round((forward ? phase : 2 - phase) * travel);

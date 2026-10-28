@@ -47,14 +47,23 @@ export function withAlpha(hex: string, alpha: number): string {
 }
 
 /** The shading ramps in the theme, each six steps from shadow (0) to highlight (5). */
-export const RAMP_NAMES = ['void', 'cyan', 'gold', 'red', 'violet'] as const;
+export const SHADING_RAMPS = ['void', 'cyan', 'gold', 'red', 'violet'] as const;
+/** The stellar ramp, six blackbody colours from cool (0) to hot (5). */
+export const STELLAR_RAMP = 'star';
+export const RAMP_NAMES = [...SHADING_RAMPS, STELLAR_RAMP] as const;
 export type RampName = (typeof RAMP_NAMES)[number];
 export const RAMP_STEPS = 6;
 
-/** Read one ramp as "#rrggbb" strings, dark → light, for sprite and planet canvases. */
+/** Read one ramp as "#rrggbb" strings, step 0 → 5, for sprite and planet canvases. */
 export function readRamp(name: RampName): string[] {
   const style = getComputedStyle(document.documentElement);
   return Array.from({ length: RAMP_STEPS }, (_, i) =>
     style.getPropertyValue(`--color-${name}-${i}`).trim(),
   );
+}
+
+/** Read any theme colour tokens by name (without the --color- prefix). */
+export function readTokens(names: readonly string[]): string[] {
+  const style = getComputedStyle(document.documentElement);
+  return names.map((name) => style.getPropertyValue(`--color-${name}`).trim());
 }

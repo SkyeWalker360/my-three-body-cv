@@ -4,6 +4,20 @@
  */
 export type PresetSummary = { index: number; name: string; short: string };
 
+export type StarSummary = { kind: string; phase: string; temperature: number };
+
+/** Extra readouts only the Go/WASM engine provides. */
+export type EngineTelemetry = {
+  stars: StarSummary[];
+  era: string;
+  civilisation: number;
+  lights: boolean;
+  critical: boolean;
+  /** Index of K.A.R.L.'s host star (the blue-white giant) in `stars`. */
+  host: number;
+  hostProgress: number;
+};
+
 export type Telemetry = {
   kinetic: number;
   potential: number;
@@ -11,7 +25,12 @@ export type Telemetry = {
   drift: number;
   divergence: number | null;
   preset: PresetSummary;
+  /** Present when the WASM engine is running; absent on the TypeScript fallback. */
+  engine?: EngineTelemetry;
 };
+
+export type LabEventKind =
+  'collision' | 'supernova' | 'engulfment' | 'ejection' | 'giant' | 'remnant' | 'electrical';
 
 export type EventMap = {
   'karl:open': { command?: string };
@@ -26,7 +45,11 @@ export type EventMap = {
   'threebody:kick': undefined;
   'threebody:shadow': { on: boolean };
   'threebody:telemetry': Telemetry;
-  'threebody:ready': { presets: PresetSummary[] };
+  'threebody:ready': { presets: PresetSummary[]; engine: 'wasm' | 'typescript' };
+  'threebody:age': undefined;
+  'threebody:event': { kind: LabEventKind; message: string };
+  /** K.A.R.L.'s host star is critical (giant branch or supernova): the scanner turns amber. */
+  'core:critical': { critical: boolean };
 };
 
 export type EventName = keyof EventMap;
