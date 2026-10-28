@@ -13,7 +13,7 @@ import { ContactLinks } from '@/components/cv/Contact';
 import { emit, on } from '@/lib/events';
 import { CELLS, larsonLevels } from '@/lib/larson';
 import { manifestData as manifest } from '@/lib/manifest-data';
-import { animationLoop, hasFinePointer, prefersReducedMotion } from '@/lib/motion';
+import { animationLoop, prefersReducedMotion } from '@/lib/motion';
 import { hexToRgb, type RampName, readRamp } from '@/lib/palette';
 import { loadLogbook, saveLogbook } from './logbook';
 import { INITIAL, type ScannerAction, type ScannerState, step } from './navigation';
@@ -81,7 +81,6 @@ export default function Scanner() {
   );
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [notice, setNotice] = useState('');
-  const [finePointer] = useState(hasFinePointer);
 
   const region = regions[state.region];
   const current: Specimen | undefined = region?.specimens[state.selected];
@@ -413,16 +412,11 @@ export default function Scanner() {
                         ? 'Final signal detected.'
                         : 'Log them all to find the final signal.'}
                     </p>
-                    {logged.size === all.length &&
-                      (finePointer ? (
-                        <button type="button" onClick={engage} className="btn btn-red mt-2">
-                          ENGAGE THE ARCHITECT
-                        </button>
-                      ) : (
-                        <p className="mt-1 text-ink-muted">
-                          The Architect waits on a desktop, with a keyboard.
-                        </p>
-                      ))}
+                    {logged.size === all.length && (
+                      <button type="button" onClick={engage} className="btn btn-red mt-2">
+                        ENGAGE THE ARCHITECT
+                      </button>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button type="button" onClick={logEverything} className="btn btn-ghost">
                         LOG EVERYTHING
