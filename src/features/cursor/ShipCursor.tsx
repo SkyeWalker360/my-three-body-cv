@@ -13,6 +13,18 @@ const SCALE = 2;
 const BODY_CLASS = 'ship-cursor';
 
 /**
+ * The inspection probe: a magnetic yoke (body plus two legs) with gold poles, 11 × 10 px,
+ * as [x, y, w, h, colour] rects. Drawn instead of the ship while inspection mode is on.
+ */
+const YOKE: [number, number, number, number, 'cyan' | 'gold'][] = [
+  [0, 0, 11, 2, 'cyan'],
+  [0, 2, 2, 6, 'cyan'],
+  [9, 2, 2, 6, 'cyan'],
+  [0, 8, 2, 2, 'gold'],
+  [9, 8, 2, 2, 'gold'],
+];
+
+/**
  * Layer 3: the spaceship cursor. Only runs with a fine hovering pointer and without
  * reduced motion; it steps aside (restoring the native cursor) while K.A.R.L.'s modal
  * dialog is open, because a modal dialog renders above every z-index.
@@ -34,6 +46,7 @@ export default function ShipCursor() {
     const ship = { ...target, angle: -Math.PI / 2 };
     let seen = false;
     let suspended = false;
+    let probe = false;
 
     const resize = () => {
       canvas.width = Math.ceil(window.innerWidth / SCALE);
@@ -56,7 +69,7 @@ export default function ShipCursor() {
       const moving = Math.hypot(dx, dy) > 1;
       if (moving) ship.angle = Math.atan2(dy, dx);
 
-      if (moving) {
+      if (moving && !probe) {
         const count = 2 + Math.floor(Math.random() * 3);
         const bx = ship.x / SCALE - Math.cos(ship.angle) * 6;
         const by = ship.y / SCALE - Math.sin(ship.angle) * 6;
@@ -82,18 +95,27 @@ export default function ShipCursor() {
         ctx.fillRect(Math.floor(pool.x[i]! - s / 2), Math.floor(pool.y[i]! - s / 2), s, s);
       }
 
-      const frame = frameForAngle(ship.angle);
-      ctx.drawImage(
-        sheet,
-        frame * FRAME_SIZE,
-        0,
-        FRAME_SIZE,
-        FRAME_SIZE,
-        Math.floor(ship.x / SCALE - FRAME_SIZE / 2),
-        Math.floor(ship.y / SCALE - FRAME_SIZE / 2),
-        FRAME_SIZE,
-        FRAME_SIZE,
-      );
+      if (probe) {
+        const px = Math.floor(ship.x / SCALE) - 5;
+        const py = Math.floor(ship.y / SCALE) - 5;
+        for (const [x, y, w, h, c] of YOKE) {
+          ctx.fillStyle = palette[c];
+          ctx.fillRect(px + x, py + y, w, h);
+        }
+      } else {
+        const frame = frameForAngle(ship.angle);
+        ctx.drawImage(
+          sheet,
+          frame * FRAME_SIZE,
+          0,
+          FRAME_SIZE,
+          FRAME_SIZE,
+          Math.floor(ship.x / SCALE - FRAME_SIZE / 2),
+          Math.floor(ship.y / SCALE - FRAME_SIZE / 2),
+          FRAME_SIZE,
+          FRAME_SIZE,
+        );
+      }
 
       // 1 px reticle on the true pointer.
       const tx = Math.floor(target.x / SCALE);
@@ -169,6 +191,9 @@ export default function ShipCursor() {
       on('karl:closed', () => suspend(false)),
       on('shooter:start', () => suspend(true)),
       on('shooter:end', () => suspend(false)),
+      on('inspection:mode', ({ on: value }) => {
+        probe = value;
+      }),
     ];
 
     return () => {

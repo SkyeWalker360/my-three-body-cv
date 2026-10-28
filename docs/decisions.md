@@ -18,7 +18,7 @@ The out-of-scope list called them "phase 6", which now means the pixel engine.
 ## D3. NDT inspection mode left out of this build
 
 Luke asked to leave the NDT content as it is for now, and the mode needs inspection write-ups in
-the manifest that don't exist yet. Its Phase 6 box stays unticked.
+the manifest that don't exist yet. Its Phase 6 box stays unticked. (Superseded by D10.)
 
 ## D4. Stacked PRs, unmerged
 
@@ -117,7 +117,7 @@ frames), Go/TypeScript parity, the worker with fallback (about 0.1 ms per frame 
 against a 4 ms budget), stellar ramp and dithered sprites with no off-palette pixels, the black
 hole baked by `cmd/bake`, and the supernova turning the scanner amber.
 
-Not done: NDT inspection mode (D3).
+NDT inspection mode followed later (D10), so every Phase 6 box is now ticked.
 
 ## D9. Field scanner for phones (Phase 7, from 28 Oct 2026)
 
@@ -143,3 +143,32 @@ CV. Decisions, for review:
 - **Checked locally:** lint, typecheck, unit tests, a static build (scanner chunk 12.3 KB
   gzipped), and Playwright on desktop and mobile. The Go engine e2e test needs `engine.wasm`
   from TinyGo, which CI builds; it was the only failure.
+
+## D10. NDT inspection mode, built from the existing manifest (28 Oct 2026)
+
+Luke asked for the brief to be finished, and still wants the NDT content left as it is, so the
+mode was built without adding or changing any CV text.
+
+- **Write-ups are the card's own manifest text.** There are no separate inspection write-ups in
+  the manifest yet, so each indication opens a slice of its card's entry, verbatim: the summary
+  and role highlights (GEN318, each role kept under its title), the highlights (Lead Life, the
+  homelab), the levels (NDT certificate) and the qualifications or subjects (education). A
+  card's text is split, in order, into at most three indications. A unit test checks every
+  line exists in the manifest. When Luke writes real inspection or engineering case studies,
+  `sectionsFor()` in `src/features/inspection/writeups.ts` is the one place to point at them.
+- **Defects live in the 4 px `pixel-border` band**, outside the card, so they can't cover text.
+  The crack is cut into the border (`void-0`) with a `gold-3` core and `gold-1` glow cells, so
+  it reads on cyan, gold and violet cards alike. A card turns its cracks `green` once every
+  indication on it has been opened ("passed"). Shapes are seeded by card id, so they're stable.
+- **Hit targets** are 24 px thick (WCAG 2.2 target size), centred on the band: at most 10 px
+  reach inside the card, inside its 24 px padding. An e2e test checks no target overlaps text.
+- **Particles** start outside the card and drift onto the crack in one `animationLoop` that
+  stops once they land. With reduced motion there are no particles, only dashed static outlines.
+- **Probe.** While the mode is on, the ship cursor draws a small magnetic yoke instead of the
+  ship. On touch devices there's no cursor, so this is desktop-only like the ship.
+- **Switching it on.** M anywhere (not while typing or with a dialog open), or the new footer
+  button "INSPECT THE WELDS (M)" (Easter egg #4), which also makes it reachable on phones. M
+  or Escape switches it off; the shooter switches it off when it starts. When it comes on, the
+  first indication on screen takes focus so Tab walks through them.
+- **Cost.** The feature is its own lazy chunk (about 7 KB gzipped, including the manifest copy),
+  loaded on the first toggle. Cards gained `relative` so the overlay can anchor to them.

@@ -30,7 +30,7 @@ export function Card({
       data-id={id}
       data-label={label}
       data-sector={sector}
-      className={`glass pixel-border border p-6 ${ACCENT[sector]} ${className}`}
+      className={`glass pixel-border relative border p-6 ${ACCENT[sector]} ${className}`}
     >
       {children}
     </article>

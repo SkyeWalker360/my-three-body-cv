@@ -48,6 +48,21 @@ export function ScannerButton({
   );
 }
 
+export function InspectionToggle() {
+  const [active, setActive] = useState(false);
+  useEffect(() => on('inspection:mode', ({ on: value }) => setActive(value)), []);
+  return (
+    <button
+      type="button"
+      className="btn btn-gold"
+      aria-pressed={active}
+      onClick={() => emit('inspection:toggle')}
+    >
+      {active ? 'END INSPECTION (M)' : 'INSPECT THE WELDS (M)'}
+    </button>
+  );
+}
+
 export function ShooterLauncher() {
   const [active, setActive] = useState(false);
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { on } from '@/lib/events';
+import { emit, on } from '@/lib/events';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 // Every Easter egg is a separate chunk, loaded on idle or on first use, never during the
@@ -12,6 +12,15 @@ const ShipCursor = dynamic(() => import('@/features/cursor/ShipCursor'), { ssr: 
 const Terminal = dynamic(() => import('@/features/karl/Terminal'), { ssr: false });
 const ShooterOverlay = dynamic(() => import('@/features/shooter/Overlay'), { ssr: false });
 const Scanner = dynamic(() => import('@/features/field-scanner/Scanner'), { ssr: false });
+const Inspection = dynamic(() => import('@/features/inspection/Inspection'), { ssr: false });
+
+/** True while the user is typing, so M only toggles inspection mode outside text fields. */
+function isTyping(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+  );
+}
 
 export default function EasterEggs() {
   const [background, setBackground] = useState(false);
@@ -19,6 +28,7 @@ export default function EasterEggs() {
   const [karl, setKarl] = useState<{ command?: string } | null>(null);
   const [shooter, setShooter] = useState(false);
   const [scanner, setScanner] = useState(false);
+  const [inspection, setInspection] = useState(false);
 
   useEffect(() => {
     const load = () => {
@@ -37,11 +47,21 @@ export default function EasterEggs() {
     const offKarl = on('karl:open', (d) => setKarl((k) => k ?? d ?? {}));
     const offShooter = on('shooter:launch', () => setShooter(true));
     const offScanner = on('scanner:open', () => setScanner(true));
+    const offInspection = on('inspection:toggle', () => setInspection(true));
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'm' && e.key !== 'M') return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || isTyping(e.target)) return;
+      if (document.querySelector('dialog[open]')) return;
+      emit('inspection:toggle');
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
       cancelIdle();
       offKarl();
       offShooter();
       offScanner();
+      offInspection();
+      window.removeEventListener('keydown', onKey);
     };
   }, []);
 
@@ -52,6 +72,7 @@ export default function EasterEggs() {
       {karl && <Terminal initialCommand={karl.command} />}
       {shooter && <ShooterOverlay autoStart />}
       {scanner && <Scanner />}
+      {inspection && <Inspection />}
     </>
   );
 }
