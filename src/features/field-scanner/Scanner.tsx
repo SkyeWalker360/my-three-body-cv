@@ -13,10 +13,18 @@ import { ContactLinks } from '@/components/cv/Contact';
 import { emit, on } from '@/lib/events';
 import { CELLS, larsonLevels } from '@/lib/larson';
 import { manifestData as manifest } from '@/lib/manifest-data';
-import { animationLoop, prefersReducedMotion } from '@/lib/motion';
+import { animationLoop, hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 import { hexToRgb, type RampName, readRamp } from '@/lib/palette';
+import type { Handheld } from '../shooter/handheld';
 import { loadLogbook, saveLogbook } from './logbook';
-import { INITIAL, type ScannerAction, type ScannerState, step } from './navigation';
+import {
+  CHEAT,
+  cheatProgress,
+  INITIAL,
+  type ScannerAction,
+  type ScannerState,
+  step,
+} from './navigation';
 import { buildRegions, type ChipTone, type Specimen, specimenNumber } from './regions';
 import { DUST, EMPTY, silhouette, SPRITE_SIZE, specimenSprite } from './sprite';
 
@@ -41,6 +49,29 @@ const KEYS: Record<string, 'up' | 'down' | 'left' | 'right' | 'a' | 'b'> = {
   Backspace: 'b',
 };
 
+/** The arcade's keyboard: arrows fly, Z, Enter or Space fire (B and Escape go back). */
+const ARCADE_KEYS: Record<string, keyof Handheld['input']> = {
+  ArrowUp: 'thrust',
+  ArrowDown: 'brake',
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  Enter: 'fire',
+  z: 'fire',
+  Z: 'fire',
+  ' ': 'fire',
+};
+
+/** What each handheld button does in the arcade, held down. */
+const ARCADE_BUTTONS: Partial<Record<ScannerAction['type'], keyof Handheld['input']>> = {
+  up: 'thrust',
+  down: 'brake',
+  left: 'left',
+  right: 'right',
+  a: 'fire',
+};
+
+type ArcadePhase = 'off' | 'playing' | 'ended';
+
 function buzz(pattern: number | number[]) {
   try {
     navigator.vibrate?.(pattern);
@@ -58,7 +89,7 @@ function rampColours(names: RampName[]): [number, number, number][] {
  * Layer 2, mobile: the K.A.R.L. Field Scanner. A native modal <dialog> that shows the CV as
  * specimens to scan. It never replaces the HTML CV; it only opens when a visitor asks.
  */
-export default function Scanner() {
+export default function Scanner({ initialArcade }: { initialArcade?: boolean }) {
   const regions = useMemo(() => buildRegions(manifest), []);
   const all = useMemo(() => regions.flatMap((r) => r.specimens), [regions]);
   const sizes = useMemo(() => regions.map((r) => r.specimens.length), [regions]);
@@ -81,6 +112,21 @@ export default function Scanner() {
   );
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [notice, setNotice] = useState('');
+
+  // The hidden arcade: the shooter on the handheld's screen. The ref lets button and key
+  // handlers see the phase before React re-renders.
+  const [arcade, setArcadeState] = useState<ArcadePhase>('off');
+  const arcadeRef = useRef<ArcadePhase>('off');
+  const setArcade = useCallback((p: ArcadePhase) => {
+    arcadeRef.current = p;
+    setArcadeState(p);
+  }, []);
+  const [arcadeStatus, setArcadeStatus] = useState('');
+  const arcadeCanvas = useRef<HTMLCanvasElement>(null);
+  const arcadeScreen = useRef<HTMLDivElement>(null);
+  const handheld = useRef<Handheld | null>(null);
+  const cheat = useRef(0);
+  const arcadeOn = arcade !== 'off';
 
   const region = regions[state.region];
   const current: Specimen | undefined = region?.specimens[state.selected];
@@ -110,8 +156,36 @@ export default function Scanner() {
     [all.length, logged],
   );
 
+  const startArcade = useCallback(() => {
+    if (arcadeRef.current !== 'off') return;
+    buzz([20, 40, 20, 40, 60]);
+    setConfirmWipe(false);
+    setArcadeStatus('Arcade loading…');
+    setArcade('playing');
+  }, [setArcade]);
+
+  const quitArcade = useCallback(() => {
+    if (arcadeRef.current === 'off') return;
+    setArcade('off');
+    setArcadeStatus('');
+    setNotice('Arcade closed.');
+  }, [setArcade]);
+
   const act = useCallback(
     (action: ScannerAction) => {
+      // In the arcade, the D-pad and A are held (see `hold`); a click only matters for B, or
+      // for A once the run is over.
+      if (arcadeRef.current !== 'off') {
+        if (action.type === 'b') quitArcade();
+        else if (action.type === 'a' && arcadeRef.current === 'ended') handheld.current?.restart();
+        return;
+      }
+      const progress = cheatProgress(cheat.current, action.type);
+      cheat.current = progress === CHEAT.length ? 0 : progress;
+      if (progress === CHEAT.length) {
+        startArcade();
+        return;
+      }
       if ((action.type === 'up' || action.type === 'down') && state.view === 'detail') {
         body.current?.scrollBy({ top: action.type === 'down' ? 80 : -80 });
         return;
@@ -123,15 +197,68 @@ export default function Scanner() {
       const opened = regions[next.region]?.specimens[next.selected];
       if (next.view === 'detail' && opened) logSpecimen(opened);
     },
-    [logSpecimen, regions, sizes, state],
+    [logSpecimen, quitArcade, regions, sizes, startArcade, state],
   );
+
+  /** Holding a handheld button in the arcade: the same flags the keyboard sets. */
+  const press = useCallback((type: ScannerAction['type'], on: boolean, e?: React.PointerEvent) => {
+    const key = ARCADE_BUTTONS[type];
+    if (!key || !handheld.current) return;
+    if (on) {
+      if (arcadeRef.current !== 'playing') return;
+      // Let a finger that slides off the button release it.
+      if (e) (e.target as Element).releasePointerCapture?.(e.pointerId);
+    }
+    handheld.current.input[key] = on;
+  }, []);
+  const hold = (type: ScannerAction['type']) => ({
+    onPointerDown: (e: React.PointerEvent) => press(type, true, e),
+    onPointerUp: () => press(type, false),
+    onPointerLeave: () => press(type, false),
+    onPointerCancel: () => press(type, false),
+  });
+
+  // Mount the shooter on the handheld's screen, loading it on first use.
+  useEffect(() => {
+    const canvas = arcadeCanvas.current;
+    const screen = arcadeScreen.current;
+    if (!arcadeOn || !canvas || !screen) return;
+    let disposed = false;
+    void import('../shooter/handheld').then(({ mountHandheld }) => {
+      if (disposed) return;
+      handheld.current = mountHandheld(canvas, screen, {
+        onStart: (n) => {
+          setArcade('playing');
+          setArcadeStatus(
+            `Arcade: ${n} CV entries became asteroids. Hold the D-pad to fly, A to fire, B to leave.`,
+          );
+        },
+        onEnd: (outcome, score) => {
+          setArcade('ended');
+          buzz(outcome === 'victory' ? [30, 40, 30, 40, 120] : 200);
+          setArcadeStatus(
+            `${outcome === 'victory' ? 'Victory! The Architect is down.' : 'Hull breach.'} Score ${score}. A to play again, B to leave.`,
+          );
+        },
+      });
+    });
+    return () => {
+      disposed = true;
+      handheld.current?.dispose();
+      handheld.current = null;
+    };
+  }, [arcadeOn, setArcade]);
 
   // Keep the keyboard focus on what changed, so screen readers follow along.
   useEffect(() => {
     if (!fromKeyboard.current) return;
     fromKeyboard.current = false;
     if (state.view === 'detail') detail.current?.focus();
-    else rows.current[state.selected]?.focus();
+    // OPTIONS has no rows: focus its tab, or the focus falls out of the dialog.
+    else {
+      const tab = document.getElementById(`scanner-tab-${state.region}`);
+      (rows.current[state.selected] ?? tab)?.focus();
+    }
   }, [state]);
 
   useEffect(() => {
@@ -141,16 +268,19 @@ export default function Scanner() {
 
   // One animation loop for the sprite and the LED strip, only while the dialog is open.
   useEffect(() => {
-    const ctx = canvas.current?.getContext('2d');
-    if (!open || !ctx) return;
+    if (!open) return;
+    // In the arcade the viewer is hidden; the LED strip keeps sweeping.
+    const ctx = canvas.current?.getContext('2d') ?? null;
     const [bg, dust] = readRamp('void')
       .filter((_, i) => i === 1 || i === 3)
       .map(hexToRgb) as [[number, number, number], [number, number, number]];
-    const image = ctx.createImageData(SPRITE_SIZE, SPRITE_SIZE);
+    const image = new ImageData(SPRITE_SIZE, SPRITE_SIZE);
     const cache = new Map<string, [number, number, number][]>();
 
     const draw = (t: number) => {
-      if (current) {
+      if (!ctx) {
+        // Nothing to draw: arcade mode.
+      } else if (current) {
         let frame = specimenSprite(current.key, current.sprite, current.ramp, t);
         if (!seen) frame = silhouette(frame);
         const id = frame.ramps.join();
@@ -190,16 +320,20 @@ export default function Scanner() {
     const loop = animationLoop((dt) => draw((elapsed += dt)));
     loop.start();
     return () => loop.dispose();
-  }, [current, open, seen]);
+  }, [arcadeOn, current, open, seen]);
 
-  const show = useCallback(() => {
-    const d = dialog.current;
-    if (!d || d.open) return;
-    opener.current = document.activeElement;
-    d.showModal();
-    setOpen(true);
-    emit('scanner:opened');
-  }, []);
+  const show = useCallback(
+    (detail?: { arcade?: boolean }) => {
+      if (detail?.arcade) startArcade();
+      const d = dialog.current;
+      if (!d || d.open) return;
+      opener.current = document.activeElement;
+      d.showModal();
+      setOpen(true);
+      emit('scanner:opened');
+    },
+    [startArcade],
+  );
 
   const close = useCallback(() => dialog.current?.close(), []);
 
@@ -207,26 +341,56 @@ export default function Scanner() {
   useEffect(() => {
     if (!started.current) {
       started.current = true;
-      show();
+      show({ arcade: initialArcade });
     }
     return on('scanner:open', show);
-  }, [show]);
+  }, [initialArcade, show]);
 
   useEffect(() => {
     const d = dialog.current;
     if (!d) return;
+    // Escape leaves the arcade first, then closes the scanner.
+    const onCancel = (e: Event) => {
+      if (arcadeRef.current === 'off') return;
+      e.preventDefault();
+      quitArcade();
+    };
     const onClose = () => {
       setOpen(false);
       setConfirmWipe(false);
+      setArcade('off');
+      setArcadeStatus('');
       emit('scanner:closed');
       const o = opener.current;
       if (o instanceof HTMLElement) o.focus();
     };
+    d.addEventListener('cancel', onCancel);
     d.addEventListener('close', onClose);
-    return () => d.removeEventListener('close', onClose);
-  }, []);
+    return () => {
+      d.removeEventListener('cancel', onCancel);
+      d.removeEventListener('close', onClose);
+    };
+  }, [quitArcade, setArcade]);
+
+  const onArcadeKey = (e: KeyboardEvent, down: boolean) => {
+    if (e.key === 'Escape') return; // The dialog's cancel event handles it.
+    if (down && KEYS[e.key] === 'b') {
+      e.preventDefault();
+      quitArcade();
+      return;
+    }
+    const key = ARCADE_KEYS[e.key];
+    if (!key) return;
+    e.preventDefault();
+    if (arcadeRef.current === 'ended') {
+      if (down && key === 'fire' && !e.repeat) handheld.current?.restart();
+      return;
+    }
+    if (handheld.current) handheld.current.input[key] = down;
+  };
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (arcadeRef.current !== 'off') return onArcadeKey(e, true);
     const type = KEYS[e.key];
     if (!type) return;
     // Enter on a focused button already clicks it.
@@ -265,6 +429,8 @@ export default function Scanner() {
     setNotice('Logbook wiped.');
   };
   const engage = () => {
+    // With a mouse and keyboard the CV itself becomes the field; on a phone it plays here.
+    if (!hasFinePointer()) return startArcade();
     close();
     emit('shooter:launch');
   };
@@ -274,13 +440,14 @@ export default function Scanner() {
   };
 
   const controlBtn =
-    'flex size-11 items-center justify-center border-2 border-cyan/50 bg-void font-pixel text-xs text-cyan active:translate-y-0.5 active:bg-cyan active:text-void';
+    'flex size-11 touch-manipulation items-center justify-center border-2 border-cyan/50 bg-void font-pixel text-xs text-cyan active:translate-y-0.5 active:bg-cyan active:text-void';
 
   return (
     <dialog
       ref={dialog}
       aria-labelledby="scanner-title"
       onKeyDown={onKeyDown}
+      onKeyUp={(e) => arcadeRef.current !== 'off' && onArcadeKey(e, false)}
       className="karl-dialog m-0 h-dvh max-h-dvh w-full max-w-none border-0 bg-transparent p-0 text-ink sm:m-auto sm:h-[92dvh] sm:max-h-[56rem] sm:w-[28rem] sm:border-2 sm:border-cyan"
     >
       <div className="glass flex h-full flex-col gap-3 px-[max(0.75rem,env(safe-area-inset-left))] pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -317,265 +484,296 @@ export default function Scanner() {
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          {/* Viewer screen */}
-          <section
-            aria-label="Viewer"
-            className="crt flex gap-3 border-2 border-cyan/50 bg-void p-2"
-          >
-            <canvas
-              ref={canvas}
-              width={SPRITE_SIZE}
-              height={SPRITE_SIZE}
-              aria-hidden="true"
-              className="pixelated size-32 shrink-0 border border-cyan/30"
-            />
-            <div className="min-w-0 space-y-1 font-terminal text-lg leading-tight">
-              {current ? (
-                <>
-                  <p className="font-pixel text-xs text-ink-muted">{specimenNumber(current.no)}</p>
-                  <p className="text-2xl leading-none text-gold">{seen ? current.name : '? ? ?'}</p>
-                  <ul className="flex flex-wrap gap-1" aria-label="Types">
-                    {current.chips.map((c) => (
-                      <li key={c.label} className={`border px-1 ${CHIP[c.tone]}`}>
-                        {c.label}
-                      </li>
-                    ))}
-                  </ul>
-                  {current.habitat && (
-                    <p className="text-ink-muted">{seen ? current.habitat : 'Habitat unknown'}</p>
-                  )}
-                  <p className={logged.has(current.key) ? 'text-green' : 'text-ink-muted'}>
-                    {logged.has(current.key) ? '● LOGGED' : '○ PRESS A TO SCAN'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="font-pixel text-xs text-ink-muted">SYS</p>
-                  <p className="text-2xl leading-none text-gold">Options</p>
-                  <p className="text-ink-muted">
-                    Logbook {logged.size}/{all.length}
-                  </p>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* Log screen */}
-          <section
-            aria-label="Log"
-            className="flex min-h-0 flex-1 flex-col border-2 border-cyan/50 bg-void"
-          >
-            <div
-              role="tablist"
-              aria-label="Regions"
-              className="flex shrink-0 overflow-x-auto border-b-2 border-cyan/40"
+          {arcadeOn ? (
+            <section
+              aria-label="Arcade"
+              className="crt flex min-h-0 flex-1 flex-col border-2 border-red/60 bg-void"
             >
-              {[...regions.map((r) => r.label), 'OPTIONS'].map((label, i) => (
-                <button
-                  key={label}
-                  type="button"
-                  role="tab"
-                  id={`scanner-tab-${i}`}
-                  aria-selected={i === state.region}
-                  aria-controls="scanner-panel"
-                  tabIndex={i === state.region ? 0 : -1}
-                  onClick={() => act({ type: 'tab', region: i })}
-                  className={`min-h-11 shrink-0 px-2 font-terminal text-lg ${
-                    i === state.region ? 'bg-cyan text-void' : 'text-ink-muted hover:text-ink'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div
-              ref={body}
-              id="scanner-panel"
-              role="tabpanel"
-              aria-labelledby={`scanner-tab-${state.region}`}
-              className="min-h-0 flex-1 overflow-y-auto p-2"
-            >
-              {state.region === optionsIndex ? (
-                <div className="space-y-4 text-sm leading-relaxed">
-                  <div>
-                    <h3 className="font-pixel text-xs text-gold">PILOT</h3>
-                    <p className="mt-1">{manifest.person.name}</p>
-                    <p className="text-ink-muted">{manifest.person.title}</p>
-                  </div>
-                  <ContactLinks person={manifest.person} />
-                  <div>
-                    <h3 className="font-pixel text-xs text-gold">LOGBOOK</h3>
-                    <p className="mt-1">
-                      {logged.size} of {all.length} specimens logged.{' '}
-                      {logged.size === all.length
-                        ? 'Final signal detected.'
-                        : 'Log them all to find the final signal.'}
-                    </p>
-                    {logged.size === all.length && (
-                      <button type="button" onClick={engage} className="btn btn-red mt-2">
-                        ENGAGE THE ARCHITECT
-                      </button>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button type="button" onClick={logEverything} className="btn btn-ghost">
-                        LOG EVERYTHING
-                      </button>
-                      {confirmWipe ? (
-                        <>
-                          <button type="button" onClick={wipe} className="btn btn-red">
-                            YES, WIPE IT
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmWipe(false)}
-                            className="btn btn-ghost"
-                          >
-                            KEEP IT
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmWipe(true)}
-                          className="btn btn-red"
-                        >
-                          WIPE LOGBOOK
-                        </button>
+              <div ref={arcadeScreen} className="min-h-0 flex-1 overflow-hidden">
+                <canvas ref={arcadeCanvas} aria-hidden="true" className="pixelated block" />
+              </div>
+              <p
+                role="status"
+                className="min-h-7 shrink-0 border-t border-red/40 px-2 font-terminal text-lg text-gold"
+              >
+                {arcadeStatus}
+              </p>
+            </section>
+          ) : (
+            <>
+              {/* Viewer screen */}
+              <section
+                aria-label="Viewer"
+                className="crt flex gap-3 border-2 border-cyan/50 bg-void p-2"
+              >
+                <canvas
+                  ref={canvas}
+                  width={SPRITE_SIZE}
+                  height={SPRITE_SIZE}
+                  aria-hidden="true"
+                  className="pixelated size-32 shrink-0 border border-cyan/30"
+                />
+                <div className="min-w-0 space-y-1 font-terminal text-lg leading-tight">
+                  {current ? (
+                    <>
+                      <p className="font-pixel text-xs text-ink-muted">
+                        {specimenNumber(current.no)}
+                      </p>
+                      <p className="text-2xl leading-none text-gold">
+                        {seen ? current.name : '? ? ?'}
+                      </p>
+                      <ul className="flex flex-wrap gap-1" aria-label="Types">
+                        {current.chips.map((c) => (
+                          <li key={c.label} className={`border px-1 ${CHIP[c.tone]}`}>
+                            {c.label}
+                          </li>
+                        ))}
+                      </ul>
+                      {current.habitat && (
+                        <p className="text-ink-muted">
+                          {seen ? current.habitat : 'Habitat unknown'}
+                        </p>
                       )}
-                    </div>
-                  </div>
-                  <button type="button" onClick={backToCv} className="btn btn-cyan">
-                    READ THE FULL CV
-                  </button>
+                      <p className={logged.has(current.key) ? 'text-green' : 'text-ink-muted'}>
+                        {logged.has(current.key) ? '● LOGGED' : '○ PRESS A TO SCAN'}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-pixel text-xs text-ink-muted">SYS</p>
+                      <p className="text-2xl leading-none text-gold">Options</p>
+                      <p className="text-ink-muted">
+                        Logbook {logged.size}/{all.length}
+                      </p>
+                    </>
+                  )}
                 </div>
-              ) : state.view === 'list' ? (
-                <ul aria-label={`${region?.label ?? ''} specimens`}>
-                  {region?.specimens.map((s, i) => {
-                    const got = logged.has(s.key);
-                    const selected = i === state.selected;
-                    return (
-                      <li key={s.key}>
-                        <button
-                          ref={(el) => {
-                            rows.current[i] = el;
-                          }}
-                          type="button"
-                          aria-current={selected ? 'true' : undefined}
-                          aria-label={`Specimen ${specimenNumber(s.no).slice(1)}, ${
-                            got ? s.name : 'not scanned'
-                          }`}
-                          onClick={() => act({ type: 'pick', index: i })}
-                          className={`grid min-h-11 w-full grid-cols-[3.5rem_minmax(0,1fr)_1rem] items-center gap-2 px-2 text-left font-terminal text-xl ${
-                            selected ? 'bg-cyan/15 text-cyan' : 'text-ink'
-                          }`}
-                        >
-                          <span className="text-ink-muted">{specimenNumber(s.no)}</span>
-                          <span className="truncate">
-                            {selected && (
-                              <span aria-hidden="true" className="text-gold">
-                                ▶{' '}
-                              </span>
-                            )}
-                            {got ? s.name : '? ? ? ? ?'}
-                          </span>
-                          <span
-                            aria-hidden="true"
-                            className={`size-3 border-2 ${got ? 'border-green bg-green' : 'border-cyan/50'}`}
-                          />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                current && (
-                  <article
-                    ref={detail}
-                    tabIndex={-1}
-                    aria-live="polite"
-                    aria-labelledby="scanner-entry-name"
-                    className="space-y-3 text-sm leading-relaxed outline-none"
-                  >
-                    <h3 id="scanner-entry-name" className="sr-only">
-                      {current.name}
-                    </h3>
-                    {current.period && (
-                      <p className="font-terminal text-lg text-ink-muted">{current.period}</p>
-                    )}
-                    <div>
-                      <h4 className="font-pixel text-xs text-gold">
-                        {current.siteCopy ? 'LAB NOTE' : 'OBSERVATION LOG'}
-                      </h4>
-                      {current.log.map((block, i) => (
-                        <div key={i} className="mt-2">
-                          {block.heading && <p className="font-bold text-cyan">{block.heading}</p>}
-                          {block.lines.length > 1 ? (
-                            <ul className="list-['–_'] space-y-1 pl-4">
-                              {block.lines.map((l) => (
-                                <li key={l}>{l}</li>
-                              ))}
-                            </ul>
+              </section>
+
+              {/* Log screen */}
+              <section
+                aria-label="Log"
+                className="flex min-h-0 flex-1 flex-col border-2 border-cyan/50 bg-void"
+              >
+                <div
+                  role="tablist"
+                  aria-label="Regions"
+                  className="flex shrink-0 overflow-x-auto border-b-2 border-cyan/40"
+                >
+                  {[...regions.map((r) => r.label), 'OPTIONS'].map((label, i) => (
+                    <button
+                      key={label}
+                      type="button"
+                      role="tab"
+                      id={`scanner-tab-${i}`}
+                      aria-selected={i === state.region}
+                      aria-controls="scanner-panel"
+                      tabIndex={i === state.region ? 0 : -1}
+                      onClick={() => act({ type: 'tab', region: i })}
+                      className={`min-h-11 shrink-0 px-2 font-terminal text-lg ${
+                        i === state.region ? 'bg-cyan text-void' : 'text-ink-muted hover:text-ink'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div
+                  ref={body}
+                  id="scanner-panel"
+                  role="tabpanel"
+                  aria-labelledby={`scanner-tab-${state.region}`}
+                  className="min-h-0 flex-1 overflow-y-auto p-2"
+                >
+                  {state.region === optionsIndex ? (
+                    <div className="space-y-4 text-sm leading-relaxed">
+                      <div>
+                        <h3 className="font-pixel text-xs text-gold">PILOT</h3>
+                        <p className="mt-1">{manifest.person.name}</p>
+                        <p className="text-ink-muted">{manifest.person.title}</p>
+                      </div>
+                      <ContactLinks person={manifest.person} />
+                      <div>
+                        <h3 className="font-pixel text-xs text-gold">LOGBOOK</h3>
+                        <p className="mt-1">
+                          {logged.size} of {all.length} specimens logged.{' '}
+                          {logged.size === all.length
+                            ? 'Final signal detected.'
+                            : 'Log them all to find the final signal.'}
+                        </p>
+                        {logged.size === all.length && (
+                          <button type="button" onClick={engage} className="btn btn-red mt-2">
+                            ENGAGE THE ARCHITECT
+                          </button>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button type="button" onClick={logEverything} className="btn btn-ghost">
+                            LOG EVERYTHING
+                          </button>
+                          {confirmWipe ? (
+                            <>
+                              <button type="button" onClick={wipe} className="btn btn-red">
+                                YES, WIPE IT
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmWipe(false)}
+                                className="btn btn-ghost"
+                              >
+                                KEEP IT
+                              </button>
+                            </>
                           ) : (
-                            <p>{block.lines[0]}</p>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmWipe(true)}
+                              className="btn btn-red"
+                            >
+                              WIPE LOGBOOK
+                            </button>
                           )}
                         </div>
-                      ))}
-                    </div>
-                    {current.chain && (
-                      <div>
-                        <h4 className="font-pixel text-xs text-gold">EVOLUTION</h4>
-                        <ol className="mt-2 flex flex-wrap items-center gap-1 font-terminal text-lg">
-                          {current.chain.labels.map((label, i) => (
-                            <li key={label} className="flex items-center gap-1">
-                              {i > 0 && <span aria-hidden="true">▸</span>}
-                              <span
-                                aria-current={i === current.chain!.here ? 'step' : undefined}
-                                className={`border px-1 ${
-                                  i === current.chain!.here
-                                    ? 'border-cyan text-cyan'
-                                    : 'border-ink-muted/60 text-ink-muted'
-                                }`}
-                              >
-                                {label}
-                              </span>
-                            </li>
-                          ))}
-                        </ol>
                       </div>
-                    )}
-                  </article>
-                )
-              )}
-            </div>
-            <p
-              role="status"
-              className="min-h-7 shrink-0 border-t border-cyan/30 px-2 font-terminal text-lg text-gold"
-            >
-              {notice}
-            </p>
-          </section>
+                      <button type="button" onClick={backToCv} className="btn btn-cyan">
+                        READ THE FULL CV
+                      </button>
+                    </div>
+                  ) : state.view === 'list' ? (
+                    <ul aria-label={`${region?.label ?? ''} specimens`}>
+                      {region?.specimens.map((s, i) => {
+                        const got = logged.has(s.key);
+                        const selected = i === state.selected;
+                        return (
+                          <li key={s.key}>
+                            <button
+                              ref={(el) => {
+                                rows.current[i] = el;
+                              }}
+                              type="button"
+                              aria-current={selected ? 'true' : undefined}
+                              aria-label={`Specimen ${specimenNumber(s.no).slice(1)}, ${
+                                got ? s.name : 'not scanned'
+                              }`}
+                              onClick={() => act({ type: 'pick', index: i })}
+                              className={`grid min-h-11 w-full grid-cols-[3.5rem_minmax(0,1fr)_1rem] items-center gap-2 px-2 text-left font-terminal text-xl ${
+                                selected ? 'bg-cyan/15 text-cyan' : 'text-ink'
+                              }`}
+                            >
+                              <span className="text-ink-muted">{specimenNumber(s.no)}</span>
+                              <span className="truncate">
+                                {selected && (
+                                  <span aria-hidden="true" className="text-gold">
+                                    ▶{' '}
+                                  </span>
+                                )}
+                                {got ? s.name : '? ? ? ? ?'}
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className={`size-3 border-2 ${got ? 'border-green bg-green' : 'border-cyan/50'}`}
+                              />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    current && (
+                      <article
+                        ref={detail}
+                        tabIndex={-1}
+                        aria-live="polite"
+                        aria-labelledby="scanner-entry-name"
+                        className="space-y-3 text-sm leading-relaxed outline-none"
+                      >
+                        <h3 id="scanner-entry-name" className="sr-only">
+                          {current.name}
+                        </h3>
+                        {current.period && (
+                          <p className="font-terminal text-lg text-ink-muted">{current.period}</p>
+                        )}
+                        <div>
+                          <h4 className="font-pixel text-xs text-gold">
+                            {current.siteCopy ? 'LAB NOTE' : 'OBSERVATION LOG'}
+                          </h4>
+                          {current.log.map((block, i) => (
+                            <div key={i} className="mt-2">
+                              {block.heading && (
+                                <p className="font-bold text-cyan">{block.heading}</p>
+                              )}
+                              {block.lines.length > 1 ? (
+                                <ul className="list-['–_'] space-y-1 pl-4">
+                                  {block.lines.map((l) => (
+                                    <li key={l}>{l}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p>{block.lines[0]}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {current.chain && (
+                          <div>
+                            <h4 className="font-pixel text-xs text-gold">EVOLUTION</h4>
+                            <ol className="mt-2 flex flex-wrap items-center gap-1 font-terminal text-lg">
+                              {current.chain.labels.map((label, i) => (
+                                <li key={label} className="flex items-center gap-1">
+                                  {i > 0 && <span aria-hidden="true">▸</span>}
+                                  <span
+                                    aria-current={i === current.chain!.here ? 'step' : undefined}
+                                    className={`border px-1 ${
+                                      i === current.chain!.here
+                                        ? 'border-cyan text-cyan'
+                                        : 'border-ink-muted/60 text-ink-muted'
+                                    }`}
+                                  >
+                                    {label}
+                                  </span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                      </article>
+                    )
+                  )}
+                </div>
+                <p
+                  role="status"
+                  className="min-h-7 shrink-0 border-t border-cyan/30 px-2 font-terminal text-lg text-gold"
+                >
+                  {notice}
+                </p>
+              </section>
+            </>
+          )}
         </div>
 
         {/* Controls */}
         <div
-          className="flex shrink-0 items-center justify-between gap-2"
+          className={`flex shrink-0 items-center justify-between gap-2 ${arcadeOn ? 'select-none' : ''}`}
           aria-label="Controls"
           role="group"
+          // A long press in the arcade is a held button, not a context menu.
+          onContextMenu={(e) => arcadeOn && e.preventDefault()}
         >
           <div className="grid grid-cols-[repeat(3,2.75rem)] grid-rows-[repeat(3,2.75rem)]">
             <button
               type="button"
-              aria-label="Up"
+              aria-label={arcadeOn ? 'Thrust' : 'Up'}
               onClick={() => act({ type: 'up' })}
+              {...hold('up')}
               className={`${controlBtn} col-start-2`}
             >
               ▲
             </button>
             <button
               type="button"
-              aria-label="Left"
+              aria-label={arcadeOn ? 'Rotate left' : 'Left'}
               onClick={() => act({ type: 'left' })}
+              {...hold('left')}
               className={`${controlBtn} col-start-1 row-start-2`}
             >
               ◀
@@ -583,16 +781,18 @@ export default function Scanner() {
             <span aria-hidden="true" className="col-start-2 row-start-2 bg-void" />
             <button
               type="button"
-              aria-label="Right"
+              aria-label={arcadeOn ? 'Rotate right' : 'Right'}
               onClick={() => act({ type: 'right' })}
+              {...hold('right')}
               className={`${controlBtn} col-start-3 row-start-2`}
             >
               ▶
             </button>
             <button
               type="button"
-              aria-label="Down"
+              aria-label={arcadeOn ? 'Brake' : 'Down'}
               onClick={() => act({ type: 'down' })}
+              {...hold('down')}
               className={`${controlBtn} col-start-2 row-start-3`}
             >
               ▼
@@ -602,7 +802,8 @@ export default function Scanner() {
             <button
               type="button"
               onClick={() => act({ type: 'options' })}
-              className="min-h-11 border border-ink-muted/60 px-2 font-pixel text-xs text-ink-muted"
+              disabled={arcadeOn}
+              className="disabled:opacity-40 min-h-11 border border-ink-muted/60 px-2 font-pixel text-xs text-ink-muted"
             >
               OPTIONS
             </button>
@@ -613,7 +814,7 @@ export default function Scanner() {
           <div className="flex items-end gap-3">
             <button
               type="button"
-              aria-label="B, back"
+              aria-label={arcadeOn ? 'B, leave arcade' : 'B, back'}
               onClick={() => act({ type: 'b' })}
               className="flex size-14 items-center justify-center border-2 border-violet bg-void font-pixel text-xs text-violet-ink active:translate-y-0.5"
             >
@@ -621,8 +822,9 @@ export default function Scanner() {
             </button>
             <button
               type="button"
-              aria-label="A, scan"
+              aria-label={arcadeOn ? (arcade === 'ended' ? 'A, play again' : 'A, fire') : 'A, scan'}
               onClick={() => act({ type: 'a' })}
+              {...hold('a')}
               className="mb-5 flex size-14 items-center justify-center border-2 border-gold bg-void font-pixel text-xs text-gold active:translate-y-0.5"
             >
               A

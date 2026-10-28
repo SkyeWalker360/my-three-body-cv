@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { emit, on, type Telemetry } from '@/lib/events';
+import { hasFinePointer } from '@/lib/motion';
 
 export function KarlButton({
   command,
@@ -41,7 +42,7 @@ export function ScannerButton({
       type="button"
       className={className}
       aria-haspopup="dialog"
-      onClick={() => emit('scanner:open')}
+      onClick={() => emit('scanner:open', {})}
     >
       {children}
     </button>
@@ -91,7 +92,10 @@ export function ShooterLauncher() {
       type="button"
       className="btn btn-red pixel-border [--pixel-border:var(--color-red)]"
       disabled={active}
-      onClick={() => emit('shooter:launch')}
+      onClick={() =>
+        // A phone can't fit the page-wide game: it plays on the field scanner's screen.
+        hasFinePointer() ? emit('shooter:launch') : emit('scanner:open', { arcade: true })
+      }
     >
       {active ? 'WEAPONS ENGAGED' : '⚡ ENGAGE WEAPONS: DESTROY THIS CV'}
     </button>

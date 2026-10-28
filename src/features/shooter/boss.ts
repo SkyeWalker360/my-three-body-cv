@@ -26,13 +26,22 @@ export type Boss = {
   polarity: 1 | -1;
 };
 
+/**
+ * Up to 40% of the field's width, in steps of 64 CSS px so the 32 px photo stays a whole-number
+ * scale: 256 on a desktop, 128 on a phone-sized field.
+ */
+export function bossSize(width: number): number {
+  return Math.max(64, Math.min(BOSS_SIZE, Math.floor((width * 0.4) / 64) * 64));
+}
+
 export function createBoss(width: number): Boss {
+  const size = bossSize(width);
   return {
     x: width / 2,
-    y: -BOSS_SIZE,
+    y: -size,
     hp: BOSS_HP,
     maxHp: BOSS_HP,
-    size: BOSS_SIZE,
+    size,
     t: 0,
     fireTimer: 1,
     shots: 0,

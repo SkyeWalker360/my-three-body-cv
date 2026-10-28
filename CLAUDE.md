@@ -19,7 +19,8 @@ is the visual reference only: never import from it.
   `src/lib/motion.ts` (pauses on `visibilitychange`). No `setInterval` animations.
 - **Features don't import each other.** They talk through the typed event bus in
   `src/lib/events.ts`. Shared code goes in `src/lib/`. (K.A.R.L. lazily imports the Noctus
-  runner because the RPG runs inside its log.)
+  runner because the RPG runs inside its log; the field scanner lazily imports
+  `shooter/handheld` because the phone arcade runs on its screen.)
 - **Pure cores:** physics, intents, dice, scanner timing and shooter rules take no DOM inputs
   and have unit tests in `tests/unit/`.
 - **Easter eggs load lazily** through `src/components/EasterEggs.tsx` (`next/dynamic`,

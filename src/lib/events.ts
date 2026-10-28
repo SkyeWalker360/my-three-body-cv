@@ -36,7 +36,8 @@ export type EventMap = {
   'karl:open': { command?: string };
   'karl:opened': undefined;
   'karl:closed': undefined;
-  'scanner:open': undefined;
+  /** `arcade` opens straight into the handheld shooter (phones' ENGAGE WEAPONS). */
+  'scanner:open': { arcade?: boolean };
   'scanner:opened': undefined;
   'scanner:closed': undefined;
   /** A request from the footer button; the shooter answers with shooter:start once running. */
