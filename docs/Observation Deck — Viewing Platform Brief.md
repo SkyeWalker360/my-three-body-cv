@@ -8,8 +8,8 @@
 
 **What this is not:** a flight game. The vessel exists so the viewpoint can be anywhere in the system and move there honestly. Piloting, autopilot scripting and combat are out of scope (see §10, "Later, maybe").
 
-> **Status (28 Oct 2026):** Phase 1 built (PR "feat(deck): observation deck phase 1"). Luke's
-> answers to §9 are recorded there. Implementation choices are in `docs/decisions.md` (D11).
+> **Status (28 Oct 2026):** Phases 1 and 2 built. Luke's answers to §9 are recorded there.
+> Implementation choices are in `docs/decisions.md` (D11, D12).
 
 ---
 
@@ -171,9 +171,9 @@ If the repo is still a single file, implement the same boundaries as JS modules.
 - **Done when:** from each vantage, bodies move correctly across the window and nothing whites out the screen.
 
 ### Phase 2 — Realism layer
-- [ ] Multi-star planet phases.
-- [ ] Eclipses/transits; interior lighting from visible stars.
-- [ ] Lensing and redshift near the black hole.
+- [x] Multi-star planet phases.
+- [x] Eclipses/transits; interior lighting from visible stars.
+- [x] Lensing and redshift near the black hole.
 - **Done when:** an eclipse visibly dims the deck interior, and planet phases match star geometry.
 
 ### Phase 3 — Observatory console

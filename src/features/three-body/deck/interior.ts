@@ -34,6 +34,30 @@ export function interiorLevel(totalFlux: number): number {
   return Math.max(0, Math.min(1, (Math.log10(totalFlux) + 2) / 3));
 }
 
+/**
+ * The glass between deck and sky: dust specks that only show when strong light rakes across
+ * them, shifted half as far as the frame for parallax.
+ */
+export function drawGlass(
+  out: Uint8Array,
+  W: number,
+  H: number,
+  light: Light,
+  offset: { x: number; y: number },
+) {
+  if (light.level < 0.5) return;
+  const tone = P(
+    STELLAR_TONES[Math.max(0, Math.min(5, light.colourClass))]![light.level > 0.8 ? 3 : 4]!,
+  );
+  for (let i = 0; i < 28; i++) {
+    const hx = Math.imul(i + 1, 2654435761) >>> 0;
+    const hy = Math.imul(i + 7, 2246822519) >>> 0;
+    const x = SIDE + 2 + (hx % Math.max(1, W - 2 * SIDE - 4)) + Math.round(offset.x / 2);
+    const y = TOP + 2 + (hy % Math.max(1, H - TOP - CONSOLE - 4)) + Math.round(offset.y / 2);
+    if (x >= 0 && x < W && y >= 0 && y < H) out[y * W + x] = tone;
+  }
+}
+
 export function drawInterior(
   out: Uint8Array,
   W: number,
@@ -52,23 +76,34 @@ export function drawInterior(
   const bottom = H - CONSOLE + oy;
   const left = SIDE + ox;
   const right = W - SIDE + ox;
-  const seat = (x: number, y: number, cx: number) =>
-    Math.abs(x - cx) < 9 &&
-    y > H - CONSOLE - 10 + oy &&
-    (y > H - CONSOLE - 8 + oy || Math.abs(x - cx) < 7);
+  const seatTop = H - CONSOLE - 10 + oy;
+  const seatCentres = [Math.round(W * 0.3) + ox, Math.round(W * 0.7) + ox];
 
+  const paint = (x: number, y: number, inSeat: boolean) => {
+    const t = BAYER[(y & 7) * 8 + (x & 7)]!;
+    // Faces toward the window catch more light: the inner rim one step brighter.
+    const rim = y === top - 1 || y === bottom || x === left - 1 || x === right;
+    let step = base - (inSeat ? 1 : 0) + (rim ? 1 : 0);
+    if (!rim && t > 0.85) step -= 1;
+    step = Math.max(0, Math.min(3, step));
+    out[y * W + x] = rim && light.level > 0.55 ? edgeIdx : FRAME[step]!;
+  };
+
+  // Only the frame's bands and the seat backs are visited, not the whole window.
   for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const inFrame = y < top || y >= bottom || x < left || x >= right;
-      const inSeat = seat(x, y, Math.round(W * 0.3) + ox) || seat(x, y, Math.round(W * 0.7) + ox);
-      if (!inFrame && !inSeat) continue;
-      const t = BAYER[(y & 7) * 8 + (x & 7)]!;
-      // Faces toward the window catch more light: the inner rim one step brighter.
-      const rim = y === top - 1 || y === bottom || x === left - 1 || x === right;
-      let step = base - (inSeat ? 1 : 0) + (rim ? 1 : 0);
-      if (!rim && t > 0.85) step -= 1;
-      step = Math.max(0, Math.min(3, step));
-      out[y * W + x] = rim && light.level > 0.55 ? edgeIdx : FRAME[step]!;
+    if (y < top || y >= bottom) {
+      for (let x = 0; x < W; x++) paint(x, y, false);
+      continue;
+    }
+    for (let x = 0; x < Math.min(W, left); x++) paint(x, y, false);
+    for (let x = Math.max(0, right); x < W; x++) paint(x, y, false);
+    if (y > seatTop) {
+      const narrow = y <= seatTop + 2;
+      for (const cx of seatCentres) {
+        const half = narrow ? 6 : 8;
+        for (let x = Math.max(0, cx - half); x <= Math.min(W - 1, cx + half); x++)
+          paint(x, y, true);
+      }
     }
   }
 
