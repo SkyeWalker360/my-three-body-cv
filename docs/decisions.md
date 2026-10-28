@@ -48,3 +48,40 @@ other ramps.
   so both solvers offer the same six and the parity fixture covers all of them.
 - Parity: both solvers integrate every preset to t = 0.5 and must agree within 1e-4 in position
   (1e-3 in velocity). They use different integrators, so bit-for-bit equality isn't expected.
+
+## D7. Engine look and lifecycle choices
+
+- **Star kinds are visual.** Every preset shows a red dwarf, a yellow sun and a blue-white giant
+  (Close pair: the giant and the dwarf form the binary and the distant Sun keeps the planet).
+  The dynamics keep each preset's own masses, so equal-mass periodic orbits stay periodic.
+- **Ageing is visitor-driven.** Nothing evolves on its own, so the background stays calm for
+  recruiters. "Age a star" sends the shortest-lived star up the giant branch (the blue giant
+  first, then the Sun; red dwarfs never age). The giant phase lasts 6 s, then the blue giant
+  goes supernova and leaves a black hole, and the Sun puffs off shells and becomes a white
+  dwarf. Remnants keep their dynamical mass, so the orbits survive.
+- **Lifecycles survive an escape reload.** When a star leaves the screen the positions reset,
+  as before, but a black hole stays a black hole. Picking a preset resets everything.
+- **Luminosity from a table, not R²T⁴.** Pixel radii aren't physical radii, so the formula made
+  the blue giant scorch the planet from across the system. The table gives the Sun 1, the blue
+  giant 20, the red dwarf 0.02, giants up to 12× (Sun) or 4× (blue giant), and remnants about 0.
+  The planet is scorched above 3× and frozen below 0.3× the Sun's light at its orbit.
+- **Planet:** a massless test particle at 0.22 around the brightest living star (never the blue
+  giant). It is lost if a star swallows it or it flies past r = 2.6, and respawns 4 s later. The
+  civilisation counter runs only in the stable era; after 20 s the night side gets city lights.
+- **Star shading uses only palette colours.** Each stellar class has five tones that darken
+  toward cooler colours at the limb (StellarTones in engine/raster/palette.go); nothing is mixed
+  with white or black, unlike the Pixel Lab preview.
+- **Framebuffer size.** About 480×270 on desktops (the page's integer upscale), at most 160,000
+  pixels, so tall phones get a portrait buffer instead of a cropped landscape one. Star radii are
+  set for a 270 px high frame and scale with it.
+- **Chaos ghost is a full copy of the system**, not a single test body, so it shows real
+  sensitivity to initial conditions (a single massless body would just orbit star 1).
+- **Kick** stays random by default but uses the engine's seeded PCG, so a seed reproduces a run.
+- **Planet sprite** is drawn at radius 3.5 px rather than as a 32×32 sprite, which would dwarf
+  the 5 px stars at this resolution.
+- **Black hole sheet:** 16 frames of 34×20, baked by `cmd/bake` into
+  `engine/raster/blackhole_gen.go` (and `public/sprites/blackhole-16.png` as a preview). CI
+  re-runs the bake and fails if the committed output differs.
+- **Build:** TinyGo `-target wasm-unknown -opt=z -gc=leaking -panic=trap`. Nothing allocates
+  after start-up (tested), so the leaking GC is safe. Result: about 24 KB gzipped. CI checks the
+  60 KB budget and that the WebAssembly and native builds draw byte-identical frames.

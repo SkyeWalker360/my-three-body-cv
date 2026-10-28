@@ -12,6 +12,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      TINYGO_VERSION: 0.41.1
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -29,7 +31,18 @@ jobs:
           test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
           go vet ./...
           go test ./...
+      - name: Install TinyGo
+        run: |
+          curl -fsSL -o /tmp/tinygo.deb https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb
+          sudo dpkg -i /tmp/tinygo.deb
+          sudo apt-get install -y binaryen
       - run: pnpm install --frozen-lockfile
+      - name: Generated engine files are up to date
+        run: |
+          pnpm engine:generate
+          git diff --exit-code -- engine/raster/blackhole_gen.go tests/fixtures public/sprites
+      - run: pnpm engine
+      - run: pnpm engine:check
       - run: pnpm content
       - run: pnpm lint
       - run: pnpm format:check
@@ -56,6 +69,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     env:
+      TINYGO_VERSION: 0.41.1
       NEXT_PUBLIC_BASE_PATH: /my-three-body-cv
       NEXT_PUBLIC_SITE_URL: https://skyewalker360.github.io/my-three-body-cv
     steps:
@@ -65,7 +79,17 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: engine/go.mod
+          cache-dependency-path: engine/go.mod
+      - name: Install TinyGo
+        run: |
+          curl -fsSL -o /tmp/tinygo.deb https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb
+          sudo dpkg -i /tmp/tinygo.deb
+          sudo apt-get install -y binaryen
       - run: pnpm install --frozen-lockfile
+      - run: pnpm engine
       - run: pnpm build
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v5

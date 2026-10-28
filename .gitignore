@@ -19,3 +19,6 @@ public/noctus/
 
 # Screenshots from the Playwright MCP server
 .playwright-mcp/
+
+# Built by `pnpm engine` (TinyGo); CI builds it before `next build`
+public/engine.wasm
