@@ -62,6 +62,11 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: check
     runs-on: ubuntu-latest
+    # One Pages deployment at a time: merging several PRs in a row queues them instead of
+    # failing with "in progress deployment" (28 Oct 2026).
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
