@@ -3,7 +3,7 @@
  * and pixel renderer. Runs unchanged in the worker or, as a fallback, on the main thread.
  */
 import type { Palette } from '@/lib/palette';
-import type { PresetSummary, Telemetry } from '@/lib/events';
+import type { LabEventKind, PresetSummary, Telemetry } from '@/lib/events';
 import { PRESETS } from './presets';
 import {
   type BodyState,
@@ -39,10 +39,17 @@ export type LabMessage =
   | { type: 'shadow'; on: boolean }
   | { type: 'pause' }
   | { type: 'resume' }
-  | { type: 'reduced'; reduced: boolean };
+  | { type: 'reduced'; reduced: boolean }
+  | { type: 'age' };
 
 export type LabOutput =
-  { type: 'ready'; presets: PresetSummary[] } | { type: 'telemetry'; telemetry: Telemetry };
+  | { type: 'ready'; presets: PresetSummary[]; engine: 'wasm' | 'typescript' }
+  | { type: 'telemetry'; telemetry: Telemetry }
+  | { type: 'event'; kind: LabEventKind; message: string }
+  | { type: 'critical'; critical: boolean };
+
+/** Either lab: the WASM engine or this TypeScript fallback. */
+export type LabLike = { handle(msg: LabMessage): void };
 
 export type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -83,7 +90,7 @@ export class Lab {
     ctx.imageSmoothingEnabled = false;
     this.reduced = reduced;
     this.load(0);
-    this.post({ type: 'ready', presets: presetSummaries() });
+    this.post({ type: 'ready', presets: presetSummaries(), engine: 'typescript' });
     this.restart();
   }
 
@@ -121,6 +128,9 @@ export class Lab {
       case 'reduced':
         this.reduced = msg.reduced;
         this.restart();
+        break;
+      case 'age':
+        // Star lifecycles are an engine extra; the fallback has none.
         break;
     }
   }

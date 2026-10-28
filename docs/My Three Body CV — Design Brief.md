@@ -364,13 +364,13 @@ A phase is done when every box under it is ticked, and phases ship in order.
 
 **Phase 6: Pixel engine and visual upgrades**
 
-- [ ] `engine/` builds with TinyGo; `engine.wasm` is 60 KB gzipped or less, checked in CI
-- [ ] `go test` passes: |ΔE / E₀| stays under 10⁻⁶ over 10⁵ steps on Figure-8, net momentum stays zero, and the same seed gives byte-identical frames
-- [ ] The Go and TypeScript solvers agree on every preset within the parity tolerance
-- [ ] The lab runs in a Web Worker at 60 Hz with `advance` + `render` at 4 ms or less per frame; it falls back to the TypeScript solver if WASM fails
-- [ ] Stars use the stellar ramp and the dithered sprite; no off-palette pixel appears in a captured frame
-- [ ] The black hole sprite sheet is baked by `cmd/bake` at build time, not drawn live
-- [ ] A supernova fires an engine event that turns the K.A.R.L. scanner amber
+- [x] `engine/` builds with TinyGo; `engine.wasm` is 60 KB gzipped or less, checked in CI
+- [x] `go test` passes: |ΔE / E₀| stays under 10⁻⁶ over 10⁵ steps on Figure-8, net momentum stays zero, and the same seed gives byte-identical frames
+- [x] The Go and TypeScript solvers agree on every preset within the parity tolerance
+- [x] The lab runs in a Web Worker at 60 Hz with `advance` + `render` at 4 ms or less per frame; it falls back to the TypeScript solver if WASM fails
+- [x] Stars use the stellar ramp and the dithered sprite; no off-palette pixel appears in a captured frame
+- [x] The black hole sprite sheet is baked by `cmd/bake` at build time, not drawn live
+- [x] A supernova fires an engine event that turns the K.A.R.L. scanner amber
 - [ ] NDT inspection mode works by keyboard, never covers CV text, and shows static outlines with reduced motion
 
 Out of scope for now:
