@@ -36,6 +36,9 @@ export type EventMap = {
   'karl:open': { command?: string };
   'karl:opened': undefined;
   'karl:closed': undefined;
+  'scanner:open': undefined;
+  'scanner:opened': undefined;
+  'scanner:closed': undefined;
   /** A request from the footer button; the shooter answers with shooter:start once running. */
   'shooter:launch': undefined;
   'shooter:start': undefined;

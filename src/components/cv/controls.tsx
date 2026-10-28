@@ -28,6 +28,26 @@ export function KarlButton({
   );
 }
 
+/** Opens the field scanner (Design Brief, Field Scanner). Inert until JavaScript loads. */
+export function ScannerButton({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-haspopup="dialog"
+      onClick={() => emit('scanner:open')}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function ShooterLauncher() {
   const [active, setActive] = useState(false);
   useEffect(() => {

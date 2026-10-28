@@ -1,7 +1,7 @@
 import { firstSentences } from '@/lib/format';
 import type { CvManifest } from '@/lib/schema';
 import { ContactLinks } from './Contact';
-import { KarlButton } from './controls';
+import { KarlButton, ScannerButton } from './controls';
 
 export function Hero({ person }: { person: CvManifest['person'] }) {
   const intro = firstSentences(person.summary, 3);
@@ -34,6 +34,7 @@ export function Hero({ person }: { person: CvManifest['person'] }) {
         <a href="#experience-title" className="btn btn-cyan">
           EXPLORE CV
         </a>
+        <ScannerButton className="btn btn-gold">OPEN FIELD SCANNER</ScannerButton>
         <KarlButton command="/core" className="btn btn-red">
           DIAGNOSE CORE
         </KarlButton>

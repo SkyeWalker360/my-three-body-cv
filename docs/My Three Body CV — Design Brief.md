@@ -4,7 +4,7 @@ Oct 27, 2026 · @Luke
 
 ## Overview, goals and audience
 
-Build My Three Body CV as a recruiter-first, statically rendered CV site with a 16-bit space theme and three discoverable Easter eggs, in [SkyeWalker360/my-three-body-cv](https://github.com/SkyeWalker360/my-three-body-cv). The existing single-file prototype (space\_pixel\_art\_cv\_website.html) is the visual reference. It is not the codebase.
+Build My Three Body CV as a recruiter-first, statically rendered CV site with a 16-bit space theme and four discoverable Easter eggs, in [SkyeWalker360/my-three-body-cv](https://github.com/SkyeWalker360/my-three-body-cv). The existing single-file prototype (space\_pixel\_art\_cv\_website.html) is the visual reference. It is not the codebase.
 
 The story: Luke is the pilot of a retro spacer. His software work (full-stack, cloud, data) is the ship's avionics. His NDT magnetic-particle certification is the hull and reactor-containment inspection that keeps K.A.R.L.'s dying-star core from collapsing.
 
@@ -20,7 +20,8 @@ Goals, in priority order (when two goals conflict, the higher one wins):
 | Recruiters and ATS | Roles, dates, skills, contact, PDF | Layer 1 HTML, `/cv.pdf`, metadata |
 | Engineering hiring managers | Evidence of depth and code quality | Three-body lab, K.A.R.L., public repo |
 | NDT and engineering employers | Certification level, issuer, date, methods | NDT card, `/ndt` command |
-| Developers and gamers | Something fun to find | Cursor, Noctus Umbra, shooter and boss |
+| Developers and gamers | Something fun to find | Cursor, Noctus Umbra, shooter and boss, field scanner |
+| Phone visitors | The CV with the theme's charm intact | Field scanner (the desktop effects don't fit a phone) |
 
 ## Visual identity
 
@@ -64,7 +65,7 @@ One long home page carries the CV. Every CV fact comes from `content/cv-manifest
 Home page sections, top to bottom:
 
 1. **Header (sticky):** LG badge, name, title line, K.A.R.L. button, three-body preset and KICK controls.
-2. **Hero:** headline, summary of 2–3 sentences, contact links (email, LinkedIn, GitHub), Download CV (PDF), and three CTAs: Explore CV, Diagnose core, Play Noctus Umbra.
+2. **Hero:** headline, summary of 2–3 sentences, contact links (email, LinkedIn, GitHub), Download CV (PDF), and four CTAs: Explore CV, Open field scanner, Diagnose core, Play Noctus Umbra.
 3. **Experience:** bento cards for GEN318 and Lead Life, with filters for All, Software, NDT and Education.
 4. **NDT certification:** issuer, MT Level 1 and 2, date, methods.
 5. **Skills and projects:** nine skill categories, spoken languages, and the Multi-Node Homelab as a personal project.
@@ -164,6 +165,50 @@ Each Easter egg is optional, lazy-loaded, and must never block reading the CV.
 - **Asteroids:** HP and fragment labels come from each entry's `game` block. Fragments are skill pebbles with 1 HP. Asteroids wrap around the edges instead of bouncing.
 - **Boss, "The Architect":** 128×128 sprite, 3 phases by HP: 100–66% syntax barrage, 66–33% magnetic flux pull, 33–0% supernova overdrive.
 - **End:** an in-canvas victory or defeat screen with the score, a Restore website button that fades the DOM back in, and a full state reset so it can be replayed. No `alert()`.
+
+### K.A.R.L. Field Scanner (mobile, Easter egg 4)
+
+Why: on a phone the background lab, the cursor and the shooter either switch off or don't fit, so the site loses its character and reads as a plain list. The field scanner gives phone visitors a game-like way through the same CV. It is a handheld unit from K.A.R.L.'s spacer: one viewer screen, one log screen, a D-pad and two buttons. It works on desktop too, by keyboard.
+
+It's inspired by the handheld-encyclopedia pattern from monster-collecting games, but the device is our own. No Pokédex name, no red flip shell, no blue lens, no borrowed sprites or fonts: the lens is K.A.R.L.'s Larson strip, the battery is the core gauge, and the shell is the void and cyan ramps.
+
+- **Never replaces the CV.** The HTML CV stays the page at every width and with JS off. The scanner is a lazily loaded `<dialog>` opened from the hero's OPEN FIELD SCANNER button and, below the `md` breakpoint, a SCAN button in the header (both `ScannerButton` islands like `KarlButton`). It never opens by itself. Below 24 rem the header name becomes screen-reader-only so SCAN and K.A.R.L. fit.
+- **Shell:** a native modal `<dialog>`, full height on phones (`100dvh` inside the safe-area insets), at most 28 rem wide and centred on larger screens. Focus stays inside, Escape closes it and focus returns to the opener, as with K.A.R.L. Glass panel with a 2 px cyan border on larger screens; scanlines only on the viewer screen, never over the log text.
+- **Header:** device name, a 12-cell Larson strip using `larsonLevels` (moved to `src/lib/larson.ts` so both features share it), and the logbook gauge (percentage of specimens logged), in gold.
+- **Viewer screen:** a 32×32 procedural specimen sprite scaled ×4 with `pixelated`, the specimen number (`#001`), name, type chips and habitat.
+- **Log screen:** region tabs, then either the region's list or the open entry's observation log.
+- **Controls:** on-screen D-pad, A and B, plus OPTIONS. ◀▶ change region (in a log: previous / next entry), ▲▼ move the selection (in a log: scroll), A opens and logs, B goes back. Swipe left and right on the screens to change region. Keyboard: arrows, Enter or Z for A, Backspace or X for B; Escape closes. Buttons are at least 44 × 44 px.
+- **Haptics:** a 10 ms tick on presses and a short pattern on a new log, through the Vibration API where it exists (Android). Never required.
+
+Specimens come only from the manifest, built by a pure `buildRegions(manifest)`:
+
+| Region | One specimen per | Name | Habitat | Log (verbatim from the manifest) | Evolution chain |
+| --- | --- | --- | --- | --- | --- |
+| Experience | `experience[]` entry | `role` | `org` · `location` | `summary`, each `roles[].title` with its highlights, `highlights`, `later` | When one entry's `org` is in another's `clients`: earlier entry → later entry |
+| Projects | `projects[]` entry | `name` | `tagline` | `highlights` | None |
+| Certifications | `certifications[].levels[]` item | the level | `issuer` · `location` | The certification `name` and course period | The certification's `levels`, in order |
+| Education | `education[]` entry | `award` | `institution` · `location` | `qualifications`, `detail` | None |
+| Skills | `skills[]` category | `category` | Sector label | `items` | None |
+| Achievements | `achievements[]` item | the achievement | None | The achievement | None |
+| Sightings | Lab object (star, dying star, black hole, planet) | Site copy | "Three-body lab" | One or two sentences of site copy about what the lab draws | Star lifecycle, for the stellar entries |
+
+- **Periods** use `formatRange` from `src/lib/format.ts`. Type chips come from `sector` (`dev`, `ndt`, `edu`, `other`) and the entry kind (`employment`, `volunteering`, project, certification, education, skill, achievement). Chip colours: cyan for `dev`, gold for `ndt`, ink for `edu`, muted ink for `other`, violet-ink for sightings.
+- **No stats.** The manifest has no proficiency or years-per-skill figures, so the scanner shows no stat bars. Add them only if Luke adds them to the CV and the manifest.
+- **Sightings copy** is site copy about the lab, like the lab panel, not a CV fact. It stays short and describes only what the engine actually draws.
+- **Hollowbrand Guild** entries wait until Luke writes or approves one line per character; the ink scripts are his.
+
+Logbook and sprites:
+
+- **Logging:** opening an entry logs it. Unlogged entries show as `? ? ?` with a dark silhouette sprite; the list item's accessible name is still "Specimen 003, not scanned". The logbook saves to `localStorage` (`mtbcv:scanner:logbook`, a list of specimen keys), wrapped in try/catch. OPTIONS has LOG EVERYTHING (so a recruiter can skip the game) and WIPE LOGBOOK, with an in-dialog confirm step.
+- **Full logbook:** at 100%, OPTIONS shows "Final signal detected". With a fine pointer and a keyboard, it offers ENGAGE THE ARCHITECT, which closes the scanner and emits `shooter:launch`. On touch it says the Architect waits on desktop.
+- **Sprites** are procedural art, so the rules for planets apply: a pure `specimenSprite(key, kind, ramp, t)` returns the ramps it shades with and a 32×32 grid of cells (ramp index × 6 + step, −1 for empty, −2 for background dust), and the component maps them to `readRamp()` colours. Kinds: `ship` (experience), `relay` (projects), `magnet` (certifications), `badge` (education and achievements), `creature` (skills: a mirrored 12 × 12 shape seeded from the category), `star`, `dying`, `black-hole` and `planet` (sightings). The ramp follows the sector (cyan for `dev`, gold for `ndt`, violet for `edu` and `other`) and the stellar ramp for stars. Shading picks steps and dithers with `bayer8()`; nothing is mixed or interpolated.
+- **Options screen:** Luke's name and title, contact links and Download CV (all from `person`), the logbook count, and a link back to the HTML CV.
+
+Budgets and motion:
+
+- The scanner is its own chunk, loaded on the first open, at most about 15 KB gzipped. It adds nothing to the pre-interaction budget.
+- One `animationLoop` runs the sprite and the Larson strip, only while the dialog is open. With reduced motion, the strip holds a static frame and the sprite draws once.
+- The log is DOM text that can be selected and is announced through `aria-live="polite"`. The sprite canvas is `aria-hidden`.
 
 ## Visual upgrades
 
@@ -314,8 +359,9 @@ my-three-body-cv/
 │  │  ├─ cursor/               # ShipCursor.tsx, particles.ts, inspect.ts (NDT mode)
 │  │  ├─ karl/                 # Terminal.tsx, machine.ts, intents.ts, CoreGauge.tsx, Scanner.tsx
 │  │  ├─ noctus/               # InkRunner.tsx, dice.ts
-│  │  └─ shooter/              # engine.ts, harvest.ts, boss.ts, Overlay.tsx
-│  └─ lib/                     # manifest.ts (Zod), events.ts (bus), motion.ts
+│  │  ├─ shooter/              # engine.ts, harvest.ts, boss.ts, Overlay.tsx
+│  │  └─ field-scanner/        # Scanner.tsx, regions.ts, navigation.ts, sprite.ts, logbook.ts
+│  └─ lib/                     # manifest.ts (Zod), events.ts (bus), motion.ts, larson.ts
 ├─ tests/                     # Vitest unit tests, Playwright e2e, Go/TS parity fixtures
 └─ .github/workflows/ci.yml   # adds: tinygo build, go test, wasm size check
 ```
@@ -324,7 +370,7 @@ Conventions:
 
 - **Branches:** `feat/<phase>-<feature>`, `fix/<issue>`. `main` is always deployable.
 - **Commits:** Conventional Commits (`feat(three-body): add barycentric correction`).
-- **Event bus:** typed `CustomEvent`s (`karl:open`, `shooter:start`, `shooter:end`, `motion:reduced`) so features never import each other.
+- **Event bus:** typed `CustomEvent`s (`karl:open`, `scanner:open`, `shooter:start`, `shooter:end`, `motion:reduced`) so features never import each other.
 - **Pure core:** the physics, intent matching, dice and collision code take no DOM inputs, so they can be unit-tested.
 
 ## Acceptance criteria and out of scope
@@ -373,9 +419,19 @@ A phase is done when every box under it is ticked, and phases ship in order.
 - [x] A supernova fires an engine event that turns the K.A.R.L. scanner amber
 - [ ] NDT inspection mode works by keyboard, never covers CV text, and shows static outlines with reduced motion
 
+**Phase 7: Field scanner (mobile)**
+
+- [x] OPEN FIELD SCANNER in the hero opens the scanner; the recruiter essentials stay above the fold at 390×844, and the CV still reads fully with JS disabled
+- [x] Every specimen's text comes verbatim from the manifest (unit test), except the Sightings site copy; there are no stat bars
+- [x] D-pad, A, B, OPTIONS, swipe and keyboard all work; touch targets are at least 44 px; Escape closes and focus returns to the opener; axe reports no violations in the dialog
+- [x] Opening an entry logs it; the logbook survives a reload and fails safe without `localStorage`; LOG EVERYTHING and WIPE LOGBOOK work, with an in-dialog confirm
+- [x] Sprites use only ramp steps (unit test), animate in one `animationLoop` that stops when the dialog closes, and draw once with reduced motion
+- [x] The scanner chunk is about 15 KB gzipped or less and loads only on first open
+
 Out of scope for now:
 
-- The home-lab leaderboard API and the LLM fallback for K.A.R.L. (phase 7)
+- The home-lab leaderboard API and the LLM fallback for K.A.R.L. (phase 8)
+- Hollowbrand Guild specimens in the field scanner, until Luke supplies one approved line per character
 - The blog and games sections (routes reserved only)
 - WebGL or Three.js rendering, multiplayer, and user accounts
 

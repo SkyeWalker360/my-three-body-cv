@@ -118,3 +118,28 @@ against a 4 ms budget), stellar ramp and dithered sprites with no off-palette pi
 hole baked by `cmd/bake`, and the supernova turning the scanner amber.
 
 Not done: NDT inspection mode (D3).
+
+## D9. Field scanner for phones (Phase 7, from 28 Oct 2026)
+
+Luke found that the site loses its charm on mobile and asked for a handheld-encyclopedia style
+CV. Decisions, for review:
+
+- **A dialog, not a mobile layout.** The HTML CV stays the page at every width, so goal 1 (one
+  screen to contact and PDF) and the no-JS rule hold. The scanner opens from a hero button and
+  never by itself. Undo: delete `src/features/field-scanner/` and the hero button.
+- **Our own device.** It borrows the interaction pattern only. Nintendo's Pokédex name, shell,
+  lens and sprites stay out, because a hiring manager reads borrowed IP badly.
+- **Specimens are manifest entries.** Certifications split into one specimen per level so MT 1 →
+  MT 2 reads as an evolution chain. Skills are one specimen per category, since the manifest has
+  no per-skill text. No stat bars: there are no proficiency figures to show.
+- **The prototype artifact is not the source.** The claude.ai prototype invented per-skill
+  copy and had Hollowbrand entries; neither carried over. Hollowbrand waits for Luke's lines.
+- **Leaderboard and LLM fallback move to phase 8.**
+- **`larsonLevels` moved to `src/lib/larson.ts`** so K.A.R.L. and the scanner share it without
+  importing each other. `features/karl/scanner.ts` re-exports it, so its tests are unchanged.
+- **A header SCAN button on phones.** On a phone the hero button sits below the long summary,
+  so `md:hidden` SCAN sits beside K.A.R.L. in the header. Below 24 rem the header name becomes
+  screen-reader-only so both fit at 360 px. Checked: no overflow at 360 and 390 px, axe clean.
+- **Checked locally:** lint, typecheck, unit tests, a static build (scanner chunk 12.3 KB
+  gzipped), and Playwright on desktop and mobile. The Go engine e2e test needs `engine.wasm`
+  from TinyGo, which CI builds; it was the only failure.

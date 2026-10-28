@@ -24,6 +24,10 @@ is the visual reference only: never import from it.
   and have unit tests in `tests/unit/`.
 - **Easter eggs load lazily** through `src/components/EasterEggs.tsx` (`next/dynamic`,
   `ssr: false`) on idle or first use.
+- **Field scanner (mobile):** a lazily loaded `<dialog>`, never a replacement for the HTML CV.
+  Specimens are built from the manifest by the pure `buildRegions()`; the only non-manifest text
+  is the short Sightings site copy. No stat bars, no Pokémon names, shapes or assets (Design
+  Brief, Field Scanner).
 - Noctus Umbra `.ink` files are drafts: Luke writes or approves the prose. Claude only does
   structure and DC mechanics.
 
@@ -55,7 +59,8 @@ that affects what the page looks like:
 1. Start the dev server (`pnpm dev`) if it isn't running.
 2. Open `http://localhost:3000`, take a screenshot, and look at the area you changed.
 3. Check for overlapping or clipped text, off-palette colours, blurred pixel art, and layout
-   breaks. Resize to 390 × 844 and check again: the site has a mobile layout.
+   breaks. Resize to 390 × 844 and check again: the site has a mobile layout. If the change
+   touches the field scanner, open it at 390 × 844 too.
 4. Fix what you find and repeat, then say in your summary what you checked.
 
 The screenshot is a check, not a proof: `pnpm test:e2e` (Playwright + axe) stays the gate
