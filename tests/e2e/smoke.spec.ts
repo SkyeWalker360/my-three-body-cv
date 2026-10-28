@@ -171,3 +171,71 @@ test('the field scanner opens, logs a specimen from the manifest, and closes on 
     page.getByRole('dialog', { name: /scanner/i }).getByText(/CORE [1-9]\d*%/),
   ).toBeVisible();
 });
+
+test('NDT inspection mode reveals indications by keyboard without covering CV text', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('[data-id="gen318"]').scrollIntoViewIfNeeded();
+  await page.keyboard.press('m');
+  const indications = page.locator('[data-indication]');
+  await expect(indications.first()).toBeAttached();
+  await expect(page.getByRole('status').filter({ hasText: 'Inspection mode on' })).toBeAttached();
+
+  // At most three per card, and no hit target overlaps any text inside its card.
+  const report = await page.evaluate(() => {
+    const overlaps = (a: DOMRect, b: DOMRect) =>
+      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const out: { max: number; hits: string[] } = { max: 0, hits: [] };
+    document.querySelectorAll<HTMLElement>('[data-destructible][data-id]').forEach((card) => {
+      const buttons = [...card.querySelectorAll<HTMLElement>('[data-indication]')];
+      out.max = Math.max(out.max, buttons.length);
+      const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+      const rects: DOMRect[] = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (!n.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        rects.push(...range.getClientRects());
+      }
+      for (const b of buttons) {
+        const box = b.getBoundingClientRect();
+        if (rects.some((r) => overlaps(box, r))) out.hits.push(b.getAttribute('aria-label')!);
+      }
+    });
+    return out;
+  });
+  expect(report.max).toBeGreaterThan(0);
+  expect(report.max).toBeLessThanOrEqual(3);
+  expect(report.hits).toEqual([]);
+
+  // Tab reaches an indication, Enter opens its write-up from the manifest.
+  const first = page.locator('[data-id="gen318"] [data-indication]').first();
+  await first.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: /GEN318/ });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('Lead Developer for GEN318', { exact: false })).toBeVisible();
+  const axe = await new AxeBuilder({ page }).include('dialog').analyze();
+  expect(axe.violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(first).toBeFocused();
+  await expect(first).toHaveAttribute('aria-label', /opened/);
+
+  await page.keyboard.press('m');
+  await expect(indications).toHaveCount(0);
+});
+
+test('NDT inspection mode shows static outlines with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'INSPECT THE WELDS (M)' }).click();
+  await expect(page.locator('[data-indication]').first()).toBeAttached();
+  await expect(page.locator('[data-inspection] rect[stroke-dasharray]').first()).toBeAttached();
+  await expect(page.locator('[data-inspection] rect[width="2"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'END INSPECTION (M)' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});

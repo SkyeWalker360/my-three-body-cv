@@ -1,6 +1,6 @@
 import type { CvManifest } from '@/lib/schema';
 import { ContactLinks } from './Contact';
-import { ShooterLauncher } from './controls';
+import { InspectionToggle, ShooterLauncher } from './controls';
 
 export function Footer({ person }: { person: CvManifest['person'] }) {
   return (
@@ -18,6 +18,17 @@ export function Footer({ person }: { person: CvManifest['person'] }) {
             <br />
             <kbd>W A S D</kbd> or arrow keys to fly · <kbd>Space</kbd> to fire · <kbd>Esc</kbd> to
             quit. Keyboard required.
+          </p>
+        </div>
+        <div className="space-y-4">
+          <p className="font-terminal text-lg text-ink-muted">EASTER EGG #4: WELD INSPECTION</p>
+          <InspectionToggle />
+          <p className="max-w-md text-sm text-ink-muted">
+            Sweeps the panel borders with a magnetic yoke. Hidden defects light up; open one for its
+            write-up.
+            <br />
+            <kbd>M</kbd> to switch on or off · <kbd>Tab</kbd> between indications · <kbd>Enter</kbd>{' '}
+            to open one.
           </p>
         </div>
         <p className="font-terminal text-lg text-ink-muted">

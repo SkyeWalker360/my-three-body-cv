@@ -51,6 +51,9 @@ export type EventMap = {
   'threebody:ready': { presets: PresetSummary[]; engine: 'wasm' | 'typescript' };
   'threebody:age': undefined;
   'threebody:event': { kind: LabEventKind; message: string };
+  /** M or the footer button; the first one mounts inspection mode, which then listens itself. */
+  'inspection:toggle': undefined;
+  'inspection:mode': { on: boolean };
   /** K.A.R.L.'s host star is critical (giant branch or supernova): the scanner turns amber. */
   'core:critical': { critical: boolean };
 };

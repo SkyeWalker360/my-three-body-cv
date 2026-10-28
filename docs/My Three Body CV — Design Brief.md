@@ -417,7 +417,7 @@ A phase is done when every box under it is ticked, and phases ship in order.
 - [x] Stars use the stellar ramp and the dithered sprite; no off-palette pixel appears in a captured frame
 - [x] The black hole sprite sheet is baked by `cmd/bake` at build time, not drawn live
 - [x] A supernova fires an engine event that turns the K.A.R.L. scanner amber
-- [ ] NDT inspection mode works by keyboard, never covers CV text, and shows static outlines with reduced motion
+- [x] NDT inspection mode works by keyboard, never covers CV text, and shows static outlines with reduced motion
 
 **Phase 7: Field scanner (mobile)**
 
