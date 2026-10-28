@@ -1,6 +1,6 @@
-import { STATE } from '../engine-layout';
-import { type EngineExports } from '../engine';
-import { BODY } from '../engine-layout';
+import type { LabEventKind } from '@/lib/events';
+import { describeEvent, type EngineExports } from '../engine';
+import { BODY, EVENT, EVENT_SLOTS, EVENT_STRIDE, STAR_KINDS, STATE } from '../engine-layout';
 import { type DeckBody, readBodies } from './bodies';
 import {
   aimAt,
@@ -16,6 +16,7 @@ import {
 import { adapt, flux, targetExposure } from './exposure';
 import { visibleFraction } from './eclipse';
 import { drawGlass, drawInterior, interiorLevel } from './interior';
+import { drawOverlays, NO_OVERLAYS, type Overlays, Trails } from './overlays';
 import { type Platform, stepPlatform } from './platform';
 import {
   type Frame,
@@ -53,6 +54,15 @@ export class DeckSession {
   /** Stars partly hidden from the deck right now: name and fraction covered. */
   eclipses: { name: string; covered: number }[] = [];
   private skyMap: SkyMap | null = null;
+  overlays: Overlays = { ...NO_OVERLAYS };
+  readonly trails = new Trails();
+  /** The body the view follows, by id, until the visitor looks away. */
+  tracking: string | null = null;
+  /** Show the engine's own orthographic pixel lab instead of the deck view (K.A.R.L.'s /lab). */
+  labView = false;
+  ghostOn = false;
+  private lastEvent = 0;
+  private events: Int32Array;
   /** Free look holds wherever it was chosen. */
   private hold: Vec3 | null = null;
   private time = 0;
@@ -76,8 +86,14 @@ export class DeckSession {
       engine.bodiesPtr(),
       BODY.rows * BODY.width,
     );
+    this.events = new Int32Array(
+      engine.memory.buffer,
+      engine.eventsPtr(),
+      1 + EVENT_SLOTS * EVENT_STRIDE,
+    );
     engine.advance(0);
     this.bodies = readBodies(this.state, this.bodyBuffer);
+    this.lastEvent = this.events[0]!;
     const v = VANTAGES[this.vantage];
     const start = v.station(this.bodies) ?? [0, 0, 2.6];
     this.platform = { position: start, velocity: [0, 0, 0] };
@@ -110,8 +126,12 @@ export class DeckSession {
   setPreset(preset: number, seed: number) {
     this.engine.init(seed, preset);
     this.engine.resize(ENGINE_W, ENGINE_H);
+    this.engine.ghost(this.ghostOn ? 1 : 0);
     this.engine.advance(0);
     this.bodies = readBodies(this.state, this.bodyBuffer);
+    this.lastEvent = this.events[0]!;
+    this.trails.clear();
+    this.tracking = null;
     this.elapsed = 0;
     this.setVantage(this.vantage, true);
   }
@@ -138,6 +158,7 @@ export class DeckSession {
   }
 
   look(dYaw: number, dPitch: number) {
+    this.tracking = null;
     this.camera.yaw = wrapYaw(this.camera.yaw + dYaw);
     this.camera.pitch = clampPitch(this.camera.pitch + dPitch);
     // The frame lags the turn a little: interior moves most, the sky not at all.
@@ -149,11 +170,88 @@ export class DeckSession {
     this.camera.zoom = clampZoom(this.camera.zoom * factor);
   }
 
-  /** Centres the view on a body (snaps; slewing animation is for the console in Phase 3). */
+  /** Slews the view onto a body and keeps it centred until the visitor looks away. */
   focus(body: DeckBody) {
+    this.tracking = body.id;
+    if (this.instant) this.aim(body, 1);
+  }
+
+  private aim(body: DeckBody, k: number) {
     const { yaw, pitch } = aimAt(this.camera, body.position);
-    this.camera.yaw = yaw;
-    this.camera.pitch = pitch;
+    this.camera.yaw = wrapYaw(this.camera.yaw + wrapYaw(yaw - this.camera.yaw) * k);
+    this.camera.pitch = clampPitch(this.camera.pitch + (pitch - this.camera.pitch) * k);
+  }
+
+  /** The body drawn under buffer pixel (x, y), allowing a few pixels' slack for small ones. */
+  pick(x: number, y: number): DeckBody | null {
+    let best: DeckBody | null = null;
+    let bestD = Infinity;
+    for (const s of this.lastFrame?.onScreen ?? []) {
+      const d = Math.hypot(s.x - x, s.y - y);
+      if (d <= Math.max(s.r + 2, 6) && d < bestD) {
+        bestD = d;
+        best = s.body;
+      }
+    }
+    return best;
+  }
+
+  /** The old Lab's telemetry: energies, drift and the chaos ghost's divergence. */
+  telemetry() {
+    this.ensureViews();
+    const s = this.state;
+    return {
+      kinetic: s[STATE.kinetic]!,
+      potential: s[STATE.potential]!,
+      total: s[STATE.total]!,
+      drift: s[STATE.drift]!,
+      ghostGap: s[STATE.ghostGap]!,
+    };
+  }
+
+  setGhost(on: boolean) {
+    this.ghostOn = on;
+    this.engine.ghost(on ? 1 : 0);
+  }
+
+  kick() {
+    this.engine.kick(-1, 0, 0);
+  }
+
+  /** New engine events since the last call, described as in the lab. */
+  drainEvents(): { kind: LabEventKind | 'critical'; message: string; critical?: boolean }[] {
+    const ev = this.events;
+    const count = ev[0]!;
+    if (count < this.lastEvent) this.lastEvent = 0;
+    const out: { kind: LabEventKind | 'critical'; message: string; critical?: boolean }[] = [];
+    if (count === this.lastEvent) return out;
+    const kinds = [0, 1, 2].map(
+      (i) => STAR_KINDS[this.state[STATE.stars + i * STATE.starWidth]!] ?? 'Star',
+    );
+    for (let seq = Math.max(this.lastEvent + 1, count - EVENT_SLOTS + 1); seq <= count; seq++) {
+      const o = 1 + ((seq - 1) % EVENT_SLOTS) * EVENT_STRIDE;
+      const kind = ev[o + 1]!;
+      if (kind === EVENT.criticalOn || kind === EVENT.criticalOff) {
+        out.push({ kind: 'critical', message: '', critical: kind === EVENT.criticalOn });
+        continue;
+      }
+      const d = describeEvent(kind, ev[o + 2]!, ev[o + 3]!, kinds);
+      if (d) out.push(d);
+    }
+    this.lastEvent = count;
+    return out;
+  }
+
+  /** The engine's own orthographic frame (480 × 270 palette indices) for the lab view. */
+  labFrame(): { pixels: Uint8Array; width: number; height: number } {
+    this.engine.render();
+    const width = this.engine.frameWidth();
+    const height = this.engine.frameHeight();
+    return {
+      pixels: new Uint8Array(this.engine.memory.buffer, this.engine.framePtr(), width * height),
+      width,
+      height,
+    };
   }
 
   /** The body nearest the centre of the view, by angle. */
@@ -173,8 +271,18 @@ export class DeckSession {
     return best;
   }
 
+  /** Views onto engine memory go stale (zero length) if WebAssembly memory ever grows. */
+  private ensureViews() {
+    if (this.state.length && this.bodyBuffer.length && this.events.length) return;
+    const e = this.engine;
+    this.state = new Float64Array(e.memory.buffer, e.statePtr(), STATE.length);
+    this.bodyBuffer = new Float64Array(e.memory.buffer, e.bodiesPtr(), BODY.rows * BODY.width);
+    this.events = new Int32Array(e.memory.buffer, e.eventsPtr(), 1 + EVENT_SLOTS * EVENT_STRIDE);
+  }
+
   /** Advances `dt` real seconds (× warp) and draws the view. */
   frame(dt: number, warp: number): Frame {
+    this.ensureViews();
     this.time += dt;
     const before = this.simTime;
     if (warp > 0) this.engine.advance(dt * 1000 * warp);
@@ -183,6 +291,7 @@ export class DeckSession {
     const dSim = after >= before ? after - before : after;
     this.elapsed += dSim;
     this.bodies = readBodies(this.state, this.bodyBuffer);
+    this.trails.record(this.bodies, after);
 
     const vantage = VANTAGES[this.vantage];
     if (vantage.available && !vantage.available(this.bodies)) this.setVantage('above');
@@ -200,6 +309,9 @@ export class DeckSession {
       );
     }
     this.camera.position = this.platform.position;
+    const tracked = this.tracking ? this.bodies.find((b) => b.id === this.tracking) : undefined;
+    if (this.tracking && !tracked) this.tracking = null;
+    if (tracked) this.aim(tracked, this.instant ? 1 : 1 - Math.exp(-dt * 5));
 
     const frame = renderDeck(
       this.pixels,
@@ -210,6 +322,7 @@ export class DeckSession {
       this.time,
       this.lens(),
     );
+    drawOverlays(this.pixels, this.camera, this.bodies, this.trails, this.overlays);
     const omega = pixelSolidAngle(basis(this.camera));
     this.exposure = adapt(
       this.exposure,

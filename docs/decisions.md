@@ -254,3 +254,36 @@ asked, compact labelled scale.
   around or zooms. Rewriting the frame's interior pass to touch only the frame took the normal
   vantages from 0.9 to 0.25 ms per frame (plain Node, 320×180).
 - **Age a star** moved into the deck's console, as the brief moves every Lab control there.
+
+## D13. Observation Deck, Phase 3: the observatory console (28 Oct 2026)
+
+- **The Lab section is gone.** "Easter egg #1" is now the Observation Deck section (engine copy
+  kept, plus a description of the deck and its ENTER button). The header's 3-BODY and KICK
+  buttons still drive the background. Everything the Lab panel did now lives on the deck's
+  console, against the deck's own engine: system (preset) choice, kick, the chaos ghost (was
+  "Shadow"), Age a star, the K/U/E/|ΔE/E₀| telemetry, star and planet details (now body cards)
+  and the event line (now an event log, polite live region).
+- **K.A.R.L.'s scanner still turns amber on a supernova.** With the Lab's AGE button gone, the
+  deck emits `core:critical` when its own star goes critical (it's K.A.R.L.'s spacer, after
+  all) and clears it when the deck closes. This keeps the main brief's Phase 6 box true.
+- **Focus** slews smoothly (snaps with reduced motion) and then tracks the body until the
+  visitor looks away. Bodies can be picked from the list, by tapping them in the window (the
+  pick allows a few pixels' slack for small ones) or with F (nearest to centre).
+- **Body cards** show type and phase, dynamical mass, true radius (solar radii and km),
+  temperature, luminosity (in Suns and watts), climate era and civilisation for the planet,
+  distance, light-travel time and the compact-scale magnification. Stars are named Star 1–3,
+  matching the lab's event messages.
+- **Spectrograph:** a 96 × 32 pixel chart of the Planck curve from 100 to 2,500 nm, the visible
+  band coloured with palette steps (UV and infrared in dim violet and red), a dotted marker at the
+  Wien peak, and the numbers in text beside it.
+- **Overlays** (all off by default): orbit trails (160 points per star, dithered fade), the five
+  Lagrange points of the two heaviest stars (circular restricted approximation using their
+  instantaneous positions), the zero-velocity curves at the Jacobi constants of L1–L3 in that
+  pair's rotating frame (marching squares on a 64² grid), and DOM labels placed each frame.
+- **Time control:** pause, 1×, 2×, 4× (the engine's per-frame step cap allows 4×). No reverse:
+  the integrator isn't run backwards anywhere else and the brief makes it optional.
+- **`/lab`** in K.A.R.L. closes the terminal and opens the deck in its lab view: the engine's own
+  orthographic pixel picture, integer-scaled. A LAB VIEW toggle on the console does the same.
+- **Glass dust** is now the class's darkest tone and only shows in strong light; at the brighter
+  tone it read as stars. The session also re-creates its views onto engine memory if they ever go
+  stale, which a dev-server reload exposed.
