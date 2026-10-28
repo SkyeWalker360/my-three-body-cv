@@ -254,6 +254,8 @@ test('the observation deck opens on the calm vantage, reads out in the DOM, and 
   await expect(dialog.getByText(/COMPACT SCALE/)).toBeVisible();
   await expect(dialog.getByText(/NEAREST TO CENTRE Star/)).toBeVisible();
   await expect(dialog.locator('canvas')).toHaveAttribute('aria-hidden', 'true');
+  // The black-hole vantage waits until a star has collapsed into one.
+  await expect(dialog.getByRole('button', { name: /Near the black hole/ })).toBeDisabled();
   // Zoom is honest about the field of view.
   await dialog.getByRole('button', { name: 'ZOOM +' }).click();
   await expect(dialog.getByText(/ZOOM 1\.5× \(FOV 67°\)/)).toBeVisible();

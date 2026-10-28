@@ -223,3 +223,34 @@ asked, compact labelled scale.
 - **Vantages in Phase 1:** above the plane (2.6 AU, so the ±1.9 AU escape circle fits the 100°
   window), barycentre (0.35 AU above it) and free look (holds where it was chosen). Switching is
   a jump for now; guided transits and the other vantages are Phase 4.
+
+## D12. Observation Deck, Phase 2: the realism layer (28 Oct 2026)
+
+- **Planet phases** were already physical in Phase 1 (each pixel's normal against every star,
+  weighted by flux). Phase 2 adds shadowing: a star's light on the planet is scaled by how much
+  of that star the planet itself can see, so another body crossing a star eclipses it.
+- **Eclipses and deck light.** Angular disc overlap (exact circle-intersection area) gives the
+  fraction of each star visible past nearer bodies, using the drawn sizes so light matches the
+  picture. The deck's interior is lit by the sum of visible flux, so it dims during an eclipse;
+  the console names the eclipse and the deck light level. The glass gains dust specks that only
+  show in strong light, with half the frame's parallax.
+- **Black-hole vantage.** Offered only once a star has collapsed. The platform rides 12 r_s from
+  the hole, outside the photon sphere (1.5 r_s). No capped thrust could hover there and the real
+  orbit would take milliseconds, so this is an explicit exception to the test-particle rule:
+  the platform is carried with the hole and its orbit is ignored.
+- **Lensing** is physical, not a stand-in: rays with impact parameter below b_c = 3√3/2 r_s are
+  captured (the shadow, about 12° across from 12 r_s); others are bent by 2r_s/b plus the
+  second-order term, or near the photon sphere by the strong-field log term (Bozza 2002). The
+  starfield is a cubemap of fluxes sampled where each ray really comes from, so stars behind the
+  hole appear as arcs. The photon ring is drawn cyan on the approaching side and red on the
+  receding side. Bodies aren't lensed (they're far from the line of sight in practice), and the
+  pass switches off beyond 5,000 r_s, where the bend is far below a pixel. The lab-scale hole
+  is drawn as before from further away.
+- **Blueshift** of 1/√(1 − r_s/r) (+4.4% at 12 r_s) moves star and sky colours up the stellar
+  ramp (about one step per 4%) and brightens starlight by the fourth power. The console shows it.
+- **Cost.** Steady state next to the hole is about 1 ms per frame: the per-pixel lensing result
+  is cached while the view geometry is unchanged and recomputed (about 3.5 ms, rays traced on a
+  half-resolution grid and interpolated where the bend is smooth) only when the visitor looks
+  around or zooms. Rewriting the frame's interior pass to touch only the frame took the normal
+  vantages from 0.9 to 0.25 ms per frame (plain Node, 320×180).
+- **Age a star** moved into the deck's console, as the brief moves every Lab control there.

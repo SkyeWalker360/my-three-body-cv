@@ -14,10 +14,21 @@ import {
   wrapYaw,
 } from './camera';
 import { adapt, flux, targetExposure } from './exposure';
-import { drawInterior, interiorLevel } from './interior';
+import { visibleFraction } from './eclipse';
+import { drawGlass, drawInterior, interiorLevel } from './interior';
 import { type Platform, stepPlatform } from './platform';
-import { type Frame, makeSky, pixelSolidAngle, renderDeck, type SkyStar } from './render';
-import { DEFAULT_VANTAGE, VANTAGES, type VantageId } from './vantages';
+import {
+  type Frame,
+  type Lens,
+  makeSky,
+  makeSkyMap,
+  pixelSolidAngle,
+  renderDeck,
+  type SkyMap,
+  type SkyStar,
+} from './render';
+import { schwarzschildAu } from './units';
+import { DEFAULT_VANTAGE, hole, VANTAGES, type VantageId } from './vantages';
 
 /** Engine frame size the deck asks for, so the engine's pixel radii stay at reference scale. */
 const ENGINE_W = 480;
@@ -39,6 +50,9 @@ export class DeckSession {
   elapsed = 0;
   lastFrame: Frame | null = null;
   light = { level: 0, colourClass: 3 };
+  /** Stars partly hidden from the deck right now: name and fraction covered. */
+  eclipses: { name: string; covered: number }[] = [];
+  private skyMap: SkyMap | null = null;
   /** Free look holds wherever it was chosen. */
   private hold: Vec3 | null = null;
   private time = 0;
@@ -108,7 +122,7 @@ export class DeckSession {
     this.vantage = id;
     this.hold = id === 'free' ? this.platform.position : null;
     const station = v.station(this.bodies) ?? this.platform.position;
-    if (jump) this.platform = { position: station, velocity: [0, 0, 0] };
+    if (jump || v.rides) this.platform = { position: station, velocity: [0, 0, 0] };
     this.camera = {
       ...this.camera,
       position: this.platform.position,
@@ -170,8 +184,12 @@ export class DeckSession {
     this.elapsed += dSim;
     this.bodies = readBodies(this.state, this.bodyBuffer);
 
+    const vantage = VANTAGES[this.vantage];
+    if (vantage.available && !vantage.available(this.bodies)) this.setVantage('above');
     const station = this.hold ?? VANTAGES[this.vantage].station(this.bodies);
-    if (dSim > 0) {
+    if (VANTAGES[this.vantage].rides && station) {
+      this.platform = { position: station, velocity: hole(this.bodies)?.velocity ?? [0, 0, 0] };
+    } else if (dSim > 0) {
       this.platform = stepPlatform(
         this.platform,
         this.bodies
@@ -190,6 +208,7 @@ export class DeckSession {
       this.sky,
       this.exposure || 1e-9,
       this.time,
+      this.lens(),
     );
     const omega = pixelSolidAngle(basis(this.camera));
     this.exposure = adapt(
@@ -199,15 +218,17 @@ export class DeckSession {
       this.instant || this.exposure === 0,
     );
 
-    // Starlight reaching the deck lights the frame.
+    // Starlight reaching the deck lights the frame, less whatever is eclipsed.
     let total = 0;
     let strongest = 0;
+    this.eclipses = [];
     for (const b of this.bodies) {
       if (b.luminosity <= 0) continue;
-      const f = flux(
-        b.luminosity,
-        Math.max(1e-3, Math.hypot(...sub(b.position, this.camera.position))),
-      );
+      const seen = visibleFraction(this.camera.position, b, this.bodies);
+      if (seen < 0.99) this.eclipses.push({ name: b.name, covered: 1 - seen });
+      const f =
+        flux(b.luminosity, Math.max(1e-3, Math.hypot(...sub(b.position, this.camera.position)))) *
+        seen;
       total += f;
       if (f > strongest) {
         strongest = f;
@@ -218,17 +239,19 @@ export class DeckSession {
     const k = Math.exp(-dt * 6);
     this.parallax.x *= k;
     this.parallax.y *= k;
-    drawInterior(
-      this.pixels,
-      this.camera.width,
-      this.camera.height,
-      this.light,
-      this.parallax,
-      this.time,
-      this.critical,
-    );
+    const { width, height } = this.camera;
+    drawGlass(this.pixels, width, height, this.light, this.parallax);
+    drawInterior(this.pixels, width, height, this.light, this.parallax, this.time, this.critical);
     this.lastFrame = frame;
     return frame;
+  }
+
+  /** The lensing pass, when a black hole exists (it switches itself off when far away). */
+  private lens(): Lens | null {
+    const h = hole(this.bodies);
+    if (!h) return null;
+    this.skyMap ??= makeSkyMap(this.sky);
+    return { position: h.position, rs: schwarzschildAu(h.mass), map: this.skyMap };
   }
 
   age(): number {

@@ -14,7 +14,7 @@ import { angularRadius, BASE_FOV, DEG, fov } from './camera';
 import { exposureValue } from './exposure';
 import { DeckSession } from './session';
 import { formatDuration, lightTravelSeconds, sci, simToSeconds, TIME_UNIT } from './units';
-import { VANTAGES, type VantageId } from './vantages';
+import { hole, VANTAGES, type VantageId } from './vantages';
 
 const TARGET_WIDTH = 320;
 const ENGINE_SPEED = 0.75; // sim units per real second (sim.SimSpeed)
@@ -33,6 +33,10 @@ type Hud = {
   elapsed: number;
   focus: DeckBody | null;
   focusDistance: number;
+  holeAvailable: boolean;
+  eclipses: { name: string; covered: number }[];
+  shift: number;
+  light: number;
 };
 
 /**
@@ -138,8 +142,12 @@ export default function Deck() {
           elapsed: s.elapsed,
           focus,
           focusDistance: focus
-            ? Math.hypot(...focus.position.map((v, i) => v - c.position[i]!))
+            ? Math.hypot(...focus.position.map((v, k) => v - c.position[k]!))
             : 0,
+          holeAvailable: hole(s.bodies) !== undefined,
+          eclipses: s.eclipses,
+          shift: s.lastFrame?.shift ?? 1,
+          light: s.light.level,
         });
       }
     });
@@ -258,6 +266,12 @@ export default function Deck() {
               type="button"
               className="btn btn-cyan flex-1 sm:flex-none"
               aria-pressed={hud?.vantage === VANTAGES[id].name}
+              disabled={id === 'blackhole' && !hud?.holeAvailable}
+              title={
+                id === 'blackhole' && !hud?.holeAvailable
+                  ? 'Age the blue-white giant until it collapses into a black hole'
+                  : undefined
+              }
               onClick={() => pickVantage(id)}
             >
               {VANTAGES[id].short}
@@ -318,6 +332,21 @@ export default function Deck() {
               {sci((2 * theta) / DEG, 2)}° · drawn ×{sci(magnification, 1)}
             </p>
           )}
+          {hud && hud.eclipses.length > 0 && (
+            <p className="text-gold">
+              <span className="text-ink-muted">ECLIPSE</span>{' '}
+              {hud.eclipses
+                .map((e) => `${e.name} ${Math.round(e.covered * 100)}% covered`)
+                .join(' · ')}{' '}
+              · deck light {Math.round(hud.light * 100)}%
+            </p>
+          )}
+          {hud && hud.shift > 1.0005 && (
+            <p className="text-cyan">
+              <span className="text-ink-muted">GRAVITATIONAL BLUESHIFT</span> incoming light ×
+              {hud.shift.toFixed(3)} (+{((hud.shift - 1) * 100).toFixed(1)}%) · lensed sky
+            </p>
+          )}
           <p role="status" className="sr-only">
             {focusName ?? ''}
           </p>
@@ -342,6 +371,9 @@ export default function Deck() {
           </button>
           <button type="button" className="btn btn-gold" onClick={() => s()?.zoomBy(1 / 1.5)}>
             ZOOM −
+          </button>
+          <button type="button" className="btn btn-violet" onClick={() => s()?.age()}>
+            AGE A STAR
           </button>
           <button
             type="button"
