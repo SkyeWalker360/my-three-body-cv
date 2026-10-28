@@ -20,6 +20,7 @@ import {
   clampPitch,
   clampZoom,
   dot,
+  fov,
   length,
   normalize,
   scale,
@@ -30,7 +31,7 @@ import {
 import { visibleFraction } from './eclipse';
 import { drawEffects, type Effect, flashRadiance, readEffects } from './effects';
 import { adapt, flux, targetExposure } from './exposure';
-import { drawGlass, drawInterior, interiorLevel } from './interior';
+import { drawGlass, drawInspection, drawInterior, interiorLevel } from './interior';
 import { drawOverlays, NO_OVERLAYS, type Overlays, Trails } from './overlays';
 import { type Obstacle, type Platform, stepPlatform } from './platform';
 import {
@@ -95,6 +96,13 @@ export class DeckSession {
   ghostOn = false;
   /** A guided trip in progress: where to, and the sim time it started. */
   transit: { to: VantageId; started: number } | null = null;
+  /**
+   * Pixel stability (brief §6): the view renders at whole-pixel angles and the leftover
+   * fraction is returned here, in buffer pixels, for the page to apply as a sub-pixel offset.
+   */
+  subpixel = { x: 0, y: 0 };
+  /** M on the deck: magnetic-particle inspection of the dome frame, and when it started. */
+  inspection: number | null = null;
   /** The last few event messages, for K.A.R.L.'s narration. */
   readonly recent: string[] = [];
   private skyMap: SkyMap | null = null;
@@ -518,6 +526,16 @@ export class DeckSession {
     if (this.tracking && !tracked) this.tracking = null;
     if (tracked) this.aim(tracked, this.instant ? 1 : 1 - Math.exp(-dt * 5));
 
+    // Render at whole-pixel yaw and pitch; the remainder becomes a sub-pixel offset, so pixel
+    // art doesn't shimmer while the view turns.
+    const step = fov(this.camera) / this.camera.width;
+    const yaw = this.camera.yaw;
+    const pitch = this.camera.pitch;
+    const qYaw = Math.round(yaw / step) * step;
+    const qPitch = Math.round(pitch / step) * step;
+    this.subpixel = { x: -(yaw - qYaw) / step, y: (pitch - qPitch) / step };
+    this.camera.yaw = qYaw;
+    this.camera.pitch = qPitch;
     const frame = renderDeck(
       this.pixels,
       this.camera,
@@ -529,6 +547,8 @@ export class DeckSession {
     );
     drawEffects(this.pixels, this.camera, this.effects, this.bodies);
     drawOverlays(this.pixels, this.camera, this.bodies, this.trails, this.overlays);
+    this.camera.yaw = yaw;
+    this.camera.pitch = pitch;
     const omega = pixelSolidAngle(basis(this.camera));
     // A supernova flash in view clamps the exposure like glare.
     let peak = frame.peak;
@@ -547,7 +567,25 @@ export class DeckSession {
     this.parallax.y *= k;
     const { width, height } = this.camera;
     drawGlass(this.pixels, width, height, this.light, this.parallax);
-    drawInterior(this.pixels, width, height, this.light, this.parallax, this.time, this.critical);
+    // Reduced motion: the scanner and console lights hold still.
+    drawInterior(
+      this.pixels,
+      width,
+      height,
+      this.light,
+      this.parallax,
+      this.instant ? 0 : this.time,
+      this.critical,
+    );
+    if (this.inspection !== null)
+      drawInspection(
+        this.pixels,
+        width,
+        height,
+        this.parallax,
+        this.time - this.inspection,
+        this.instant,
+      );
     this.drawWipe();
     this.lastFrame = frame;
     return frame;
@@ -649,5 +687,10 @@ export class DeckSession {
 
   age(): number {
     return this.engine.age();
+  }
+
+  toggleInspection(): boolean {
+    this.inspection = this.inspection === null ? this.time : null;
+    return this.inspection !== null;
   }
 }

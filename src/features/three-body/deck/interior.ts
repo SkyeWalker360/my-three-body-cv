@@ -130,3 +130,69 @@ export function drawInterior(
     if (on && x >= 0 && x < W && y >= 0 && y < H) out[y * W + x] = CONSOLE_LED[i % 3]!;
   }
 }
+
+/**
+ * The dome frame's weld indications, for magnetic-particle inspection (M on the deck): fixed
+ * cracks in the frame and console (in frame-relative coordinates: fractions of the width, rows
+ * from the top or bottom edge). Ship lore, not CV text.
+ */
+export const DOME_INDICATIONS = [
+  { name: 'Port strut, weld toe', side: 'left', at: 0.35, length: 16 },
+  { name: 'Scanner housing, lap joint', side: 'top', at: 0.22, length: 22 },
+  { name: 'Console rail, fillet weld', side: 'bottom', at: 0.62, length: 26 },
+] as const;
+
+const CRACK = P('gold-3');
+const CRACK_GLOW = P('gold-1');
+const PARTICLE = P('gold-4');
+
+/**
+ * Draws the indications: magnetic particles drift in over a second and gather on each crack,
+ * which then holds as a glowing gold line. With reduced motion the cracks just appear.
+ */
+export function drawInspection(
+  out: Uint8Array,
+  W: number,
+  H: number,
+  offset: { x: number; y: number },
+  since: number,
+  instant: boolean,
+) {
+  const ox = Math.round(offset.x);
+  const oy = Math.round(offset.y);
+  const settled = instant || since > 1.1;
+  const put = (x: number, y: number, c: number) => {
+    if (x >= 0 && y >= 0 && x < W && y < H) out[y * W + x] = c;
+  };
+  DOME_INDICATIONS.forEach((d, k) => {
+    for (let i = 0; i < d.length; i++) {
+      // A crack wanders one pixel across the member as it runs along it.
+      const wobble = ((i * 7 + k * 3) % 5 === 0 ? 1 : 0) - ((i * 5 + k) % 7 === 0 ? 1 : 0);
+      let x: number;
+      let y: number;
+      if (d.side === 'left') {
+        x = Math.floor(SIDE / 2) + wobble + ox;
+        y = TOP + Math.round((H - TOP - CONSOLE) * d.at) + i + oy;
+      } else if (d.side === 'top') {
+        x = Math.round(W * d.at) + i + ox;
+        y = TOP - 3 + wobble + oy;
+      } else {
+        x = Math.round(W * d.at) + i + ox;
+        y = H - CONSOLE + 3 + wobble + oy;
+      }
+      if (settled) {
+        put(x, y, CRACK);
+        put(x + (d.side === 'left' ? 1 : 0), y + (d.side === 'left' ? 0 : 1), CRACK_GLOW);
+      } else if (i % 3 === 0) {
+        // Particles fall in from a few pixels away toward the crack.
+        const t = Math.min(1, since / 1.1);
+        const from = 6 * (1 - t);
+        put(
+          x + (d.side === 'left' ? Math.round(from) : 0),
+          y - (d.side === 'left' ? 0 : Math.round(from)),
+          PARTICLE,
+        );
+      }
+    }
+  });
+}
