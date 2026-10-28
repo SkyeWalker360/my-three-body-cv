@@ -85,7 +85,14 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
     fire: false,
   });
   const loop = useRef<ReturnType<typeof animationLoop> | null>(null);
-  const [phase, setPhase] = useState<'off' | 'playing' | 'ended'>('off');
+  const [phase, setPhaseState] = useState<'off' | 'playing' | 'ended'>('off');
+  // The key handler reads this ref, so a key pressed before React re-renders still counts
+  // (Escape straight after launch used to be lost, leaving the CV hidden).
+  const phaseRef = useRef<'off' | 'playing' | 'ended'>('off');
+  const setPhase = useCallback((p: 'off' | 'playing' | 'ended') => {
+    phaseRef.current = p;
+    setPhaseState(p);
+  }, []);
   const [status, setStatus] = useState('');
   const [outcome, setOutcome] = useState<'victory' | 'defeat'>('defeat');
 
@@ -113,7 +120,7 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
       emit('shooter:end', { score, outcome });
       document.getElementById('shooter-launch')?.focus();
     },
-    [restoreDom],
+    [restoreDom, setPhase],
   );
 
   const start = useCallback(() => {
@@ -143,7 +150,7 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
         loop.current?.start();
       }),
     );
-  }, []);
+  }, [setPhase]);
 
   // Rendering and the game loop.
   useEffect(() => {
@@ -193,7 +200,7 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
       loop.current?.dispose();
       window.removeEventListener('resize', resize);
     };
-  }, []);
+  }, [setPhase]);
 
   useEffect(() => {
     if (phase === 'ended') restoreRef.current?.focus();
@@ -201,8 +208,9 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
 
   // Keyboard controls while a run is active.
   useEffect(() => {
-    if (phase === 'off') return;
     const onKey = (e: KeyboardEvent) => {
+      const phase = phaseRef.current;
+      if (phase === 'off') return;
       if (e.code === 'Escape') {
         e.preventDefault();
         stop('quit');
@@ -221,7 +229,7 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('keyup', onKey);
     };
-  }, [phase, stop]);
+  }, [stop]);
 
   // First start comes from the host that lazy-loaded us; later ones from the event bus.
   const booted = useRef(false);
