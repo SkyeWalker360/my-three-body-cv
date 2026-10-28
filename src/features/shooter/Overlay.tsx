@@ -28,6 +28,15 @@ const KEYS: Record<string, keyof Input> = {
   Space: 'fire',
 };
 
+/** On-screen controls for touch: hold a button to steer, thrust, brake or fire. */
+const PAD: { key: keyof Input; label: string; name: string; tone: string }[] = [
+  { key: 'left', label: '◀', name: 'Rotate left', tone: 'btn-cyan' },
+  { key: 'right', label: '▶', name: 'Rotate right', tone: 'btn-cyan' },
+  { key: 'thrust', label: '▲', name: 'Thrust', tone: 'btn-gold' },
+  { key: 'brake', label: '▼', name: 'Brake', tone: 'btn-gold' },
+  { key: 'fire', label: 'FIRE', name: 'Fire', tone: 'btn-red' },
+];
+
 function gameFor(id: string): GameBlock | undefined {
   if (id === 'skills') {
     return { hp: 4, fragments: manifestData.skills.slice(0, 4).map((s) => s.category) };
@@ -53,13 +62,25 @@ function manifestSeeds(width: number, height: number): Seed[] {
         : 'name' in found.entry
           ? found.entry.name
           : found.entry.institution;
+    // The engine draws an asteroid at 35% of its block's width: 320 gives about 112 px, room
+    // for a readable label even on a phone. Staggered over three rows so they don't stack.
+    const w = 320;
+    const h = 190;
     return {
       id,
       label,
-      rect: { x: ((i + 0.5) / ids.length) * width - 100, y: height * 0.25, w: 200, h: 120 },
+      rect: {
+        x: ((i + 0.5) / ids.length) * width - w / 2,
+        y: height * (0.14 + 0.13 * (i % 3)),
+        w,
+        h,
+      },
     };
   });
 }
+
+/** Fewer than this many blocks on screen (a phone shows one card) and the field is topped up. */
+const MIN_ASTEROIDS = 4;
 
 function fontFamily(): string {
   return (
@@ -85,6 +106,12 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
     fire: false,
   });
   const loop = useRef<ReturnType<typeof animationLoop> | null>(null);
+  /** Hold-to-act for the touch pad: the same flags the keyboard sets. */
+  const press = useCallback((key: keyof Input, on: boolean) => {
+    input.current[key] = on;
+  }, []);
+  // Touch devices get the on-screen pad; it stays hidden for mouse and keyboard.
+  const [touch] = useState(() => window.matchMedia('(pointer: coarse)').matches);
   const [phase, setPhaseState] = useState<'off' | 'playing' | 'ended'>('off');
   // The key handler reads this ref, so a key pressed before React re-renders still counts
   // (Escape straight after launch used to be lost, leaving the CV hidden).
@@ -134,7 +161,11 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
         const width = window.innerWidth;
         const height = window.innerHeight;
         let seeds = harvest();
-        if (seeds.length === 0) seeds = manifestSeeds(width, height);
+        if (seeds.length < MIN_ASTEROIDS) {
+          // Top up with the manifest entries that aren't already on screen.
+          const have = new Set(seeds.map((s) => s.id));
+          seeds = [...seeds, ...manifestSeeds(width, height).filter((s) => !have.has(s.id))];
+        }
         for (const s of seeds) {
           if (s.el) {
             s.el.style.visibility = 'hidden';
@@ -261,6 +292,37 @@ export default function ShooterOverlay({ autoStart }: { autoStart: boolean }) {
         >
           QUIT (ESC)
         </button>
+      )}
+      {phase === 'playing' && touch && (
+        <div
+          role="group"
+          aria-label="Ship controls"
+          className="fixed inset-x-0 bottom-16 z-40 flex items-end justify-between px-4 select-none"
+        >
+          {[PAD.slice(0, 2), PAD.slice(2)].map((group, g) => (
+            <div key={g} className="flex gap-2">
+              {group.map((b) => (
+                <button
+                  key={b.key}
+                  type="button"
+                  aria-label={b.name}
+                  className={`btn ${b.tone} pixel-border min-h-14 min-w-14 touch-none justify-center text-base`}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    (e.target as Element).releasePointerCapture?.(e.pointerId);
+                    press(b.key, true);
+                  }}
+                  onPointerUp={() => press(b.key, false)}
+                  onPointerLeave={() => press(b.key, false)}
+                  onPointerCancel={() => press(b.key, false)}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
       )}
       {phase === 'ended' && (
         <div className="fixed inset-x-0 bottom-16 z-40 flex justify-center gap-4 px-4">
