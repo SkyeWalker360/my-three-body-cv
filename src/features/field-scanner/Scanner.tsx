@@ -472,7 +472,7 @@ export default function Scanner({ initialArcade }: { initialArcade?: boolean }) 
           <button
             type="button"
             onClick={close}
-            className="flex min-h-11 min-w-11 items-center justify-center font-pixel text-xs text-ink-muted hover:text-ink"
+            className="btn btn-red size-11 shrink-0 p-0"
             aria-label="Close field scanner"
           >
             ✕
@@ -480,7 +480,7 @@ export default function Scanner({ initialArcade }: { initialArcade?: boolean }) 
         </header>
 
         <div
-          className="flex min-h-0 flex-1 flex-col gap-3"
+          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
@@ -504,14 +504,14 @@ export default function Scanner({ initialArcade }: { initialArcade?: boolean }) 
               {/* Viewer screen */}
               <section
                 aria-label="Viewer"
-                className="crt flex gap-3 border-2 border-cyan/50 bg-void p-2"
+                className="crt flex shrink-0 gap-3 border-2 border-cyan/50 bg-void p-2"
               >
                 <canvas
                   ref={canvas}
                   width={SPRITE_SIZE}
                   height={SPRITE_SIZE}
                   aria-hidden="true"
-                  className="pixelated size-32 shrink-0 border border-cyan/30"
+                  className="pixelated size-32 shrink-0 border border-cyan/30 [@media(max-height:40rem)]:size-24"
                 />
                 <div className="min-w-0 space-y-1 font-terminal text-lg leading-tight">
                   {current ? (
@@ -553,7 +553,7 @@ export default function Scanner({ initialArcade }: { initialArcade?: boolean }) 
               {/* Log screen */}
               <section
                 aria-label="Log"
-                className="flex min-h-0 flex-1 flex-col border-2 border-cyan/50 bg-void"
+                className="flex min-h-48 flex-1 flex-col border-2 border-cyan/50 bg-void"
               >
                 <div
                   role="tablist"
@@ -753,7 +753,7 @@ export default function Scanner({ initialArcade }: { initialArcade?: boolean }) 
 
         {/* Controls */}
         <div
-          className={`flex shrink-0 items-center justify-between gap-2 ${arcadeOn ? 'select-none' : ''}`}
+          className={`flex shrink-0 flex-wrap items-center justify-between gap-2 ${arcadeOn ? 'select-none' : ''}`}
           aria-label="Controls"
           role="group"
           // A long press in the arcade is a held button, not a context menu.
@@ -798,7 +798,8 @@ export default function Scanner({ initialArcade }: { initialArcade?: boolean }) 
               ▼
             </button>
           </div>
-          <div className="flex flex-col items-center gap-2">
+          {/* Below 360 px the three columns don't fit: this one moves up to its own row. */}
+          <div className="flex flex-col items-center gap-2 max-[359px]:order-first max-[359px]:w-full max-[359px]:flex-row max-[359px]:justify-between">
             <button
               type="button"
               onClick={() => act({ type: 'options' })}

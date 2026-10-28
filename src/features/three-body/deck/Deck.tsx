@@ -725,7 +725,7 @@ export default function Deck({
             <label className="flex items-center gap-2">
               <span className="text-ink-muted">SYSTEM</span>
               <select
-                className="border border-cyan/50 bg-void px-2 py-1 text-ink"
+                className="min-h-11 border border-cyan/50 bg-void px-2 py-1 text-ink"
                 value={presetIndex}
                 onChange={(e) => pickPreset(Number(e.target.value))}
               >
@@ -799,9 +799,10 @@ export default function Deck({
             <fieldset className="flex flex-wrap gap-x-4">
               <legend className="text-ink-muted">OVERLAYS</legend>
               {OVERLAY_LABELS.map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2">
+                <label key={key} className="flex min-h-11 cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
+                    className="size-5 accent-cyan"
                     checked={overlays[key]}
                     onChange={(e) => setOverlays({ ...overlays, [key]: e.target.checked })}
                   />

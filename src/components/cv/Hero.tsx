@@ -25,7 +25,7 @@ export function Hero({ person }: { person: CvManifest['person'] }) {
       <p className="mt-6 max-w-3xl text-sm leading-relaxed sm:text-base">{intro}</p>
       {rest && (
         <details className="mt-2 max-w-3xl text-sm">
-          <summary className="cursor-pointer text-cyan">Full profile</summary>
+          <summary className="cursor-pointer py-3 text-cyan">Full profile</summary>
           <p className="mt-2 leading-relaxed">{rest}</p>
         </details>
       )}

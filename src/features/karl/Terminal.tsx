@@ -323,15 +323,15 @@ export default function Terminal({ initialCommand }: { initialCommand?: string }
           <h2 id="karl-title" className="font-pixel text-xs text-red">
             K.A.R.L. MARK-IV
           </h2>
-          <Larson active={open} karr={mode === 'karr'} />
           <button
             type="button"
             onClick={close}
-            className="font-pixel text-xs text-ink-muted hover:text-ink"
+            className="btn btn-red min-w-11 px-3 sm:order-last"
             aria-label="Close K.A.R.L."
           >
-            ✕ CLOSE
+            ✕<span className="max-sm:hidden">CLOSE</span>
           </button>
+          <Larson active={open} karr={mode === 'karr'} />
         </header>
 
         <div className="flex items-center gap-4 border-b border-cyan/20 px-4 py-2 font-terminal text-lg">
@@ -393,7 +393,7 @@ export default function Terminal({ initialCommand }: { initialCommand?: string }
             autoComplete="off"
             spellCheck={false}
             placeholder={mode === 'rpg' ? 'Type a choice number…' : 'Ask, or type /help'}
-            className="min-w-0 flex-1 bg-transparent font-terminal text-lg text-ink placeholder:text-ink-muted"
+            className="min-h-11 min-w-0 flex-1 bg-transparent font-terminal text-lg text-ink placeholder:text-ink-muted"
           />
           <button type="submit" disabled={busy} className="btn btn-cyan">
             SEND

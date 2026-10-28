@@ -15,6 +15,8 @@ is the visual reference only: never import from it.
   which can't read CSS and mirror the tokens.
 - **Type:** Press Start 2P ≥ 12 px for headings, buttons and badges only; VT323 ≥ 18 px for
   terminal and HUD; Space Mono for body copy.
+- **Exits:** every dialog, overlay and mode has a visible exit button of at least 44 × 44 px
+  that stays on screen (an e2e test checks this). Escape alone isn't enough on a phone.
 - **Motion:** honour `prefers-reduced-motion`. Animation loops use `animationLoop` from
   `src/lib/motion.ts` (pauses on `visibilitychange`). No `setInterval` animations.
 - **Features don't import each other.** They talk through the typed event bus in
@@ -76,6 +78,7 @@ pnpm lint && pnpm typecheck && pnpm test
 pnpm build        # static export to out/
 pnpm test:e2e     # Playwright + axe against out/ (run pnpm build first)
 pnpm palette      # regenerate design/three-body-cv.gpl after editing a ramp
+pnpm qol          # exits, tap targets, overflow, axe on 3 screen sizes (needs a running server)
 ```
 
 Commits use Conventional Commits (`feat(three-body): …`); one phase or feature per PR.

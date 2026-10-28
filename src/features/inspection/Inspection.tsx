@@ -226,8 +226,19 @@ export default function Inspection() {
           aria-hidden="true"
           className="pixel-border pointer-events-none fixed bottom-6 left-1/2 z-30 -translate-x-1/2 bg-gold px-4 py-3 font-pixel text-xs whitespace-nowrap text-void [--pixel-border:var(--color-gold)]"
         >
-          INSPECTING · {total} FOUND · M TO EXIT
+          INSPECTING · {total} FOUND
         </p>
+      )}
+
+      {/* The footer toggle scrolls away and phones have no M key: keep a way out on screen. */}
+      {active && (
+        <button
+          type="button"
+          onClick={() => setActive(false)}
+          className="btn btn-red fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30"
+        >
+          ✕ END INSPECTION
+        </button>
       )}
 
       {active &&
