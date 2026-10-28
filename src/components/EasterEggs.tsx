@@ -1,8 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
-import { emit, on } from '@/lib/events';
+import { useEffect, useRef, useState } from 'react';
+import { emit, type EventMap, on } from '@/lib/events';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 // Every Easter egg is a separate chunk, loaded on idle or on first use, never during the
@@ -30,7 +30,12 @@ export default function EasterEggs() {
   const [shooter, setShooter] = useState(false);
   const [scanner, setScanner] = useState(false);
   const [inspection, setInspection] = useState(false);
-  const [deck, setDeck] = useState<{ view?: 'deck' | 'lab' } | null>(null);
+  const [deck, setDeck] = useState<{
+    view?: 'deck' | 'lab';
+    commands: EventMap['deck:command'][];
+  } | null>(null);
+  // Commands sent before the deck has loaded wait here, then go to it as a prop.
+  const deckQueue = useRef<EventMap['deck:command'][] | null>([]);
 
   useEffect(() => {
     const load = () => {
@@ -50,7 +55,13 @@ export default function EasterEggs() {
     const offShooter = on('shooter:launch', () => setShooter(true));
     const offScanner = on('scanner:open', () => setScanner(true));
     const offInspection = on('inspection:toggle', () => setInspection(true));
-    const offDeck = on('deck:open', (d) => setDeck((v) => v ?? d));
+    const offDeckCommand = on('deck:command', (c) => deckQueue.current?.push(c));
+    const offDeck = on('deck:open', (d) => {
+      const commands = deckQueue.current;
+      if (!commands) return;
+      deckQueue.current = null;
+      setDeck({ view: d.view, commands });
+    });
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'm' && e.key !== 'M') return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || isTyping(e.target)) return;
@@ -65,6 +76,7 @@ export default function EasterEggs() {
       offScanner();
       offInspection();
       offDeck();
+      offDeckCommand();
       window.removeEventListener('keydown', onKey);
     };
   }, []);
@@ -77,7 +89,7 @@ export default function EasterEggs() {
       {shooter && <ShooterOverlay autoStart />}
       {scanner && <Scanner />}
       {inspection && <Inspection />}
-      {deck && <Deck initialView={deck.view} />}
+      {deck && <Deck initialView={deck.view} initialCommands={deck.commands} />}
     </>
   );
 }

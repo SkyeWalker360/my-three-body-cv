@@ -54,6 +54,10 @@ export type EventMap = {
   /** The observation deck: a request to open it, then its own opened/closed notices. */
   /** `view: 'lab'` opens straight into the orthographic lab view (K.A.R.L.'s /lab). */
   'deck:open': { view?: 'deck' | 'lab' };
+  /** K.A.R.L.'s deck commands: move, focus or zoom (applied once the deck is ready). */
+  'deck:command': { vantage?: string; focus?: string; zoom?: number };
+  /** The deck's narration, refreshed while it's open, for K.A.R.L. to read out on request. */
+  'deck:status': { lines: string[] };
   'deck:opened': undefined;
   'deck:closed': undefined;
   /** M or the footer button; the first one mounts inspection mode, which then listens itself. */

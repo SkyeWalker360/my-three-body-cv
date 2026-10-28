@@ -100,9 +100,11 @@ type World struct {
 	Frame raster.Frame
 	bg    [raster.MaxPixels]uint8
 
-	State  [StateLen]float64
-	Bodies [BodiesLen]float64
-	Events [EventsLen]int32
+	State       [StateLen]float64
+	Bodies      [BodiesLen]float64
+	Effects     [EffectsLen]float64
+	effectCount int
+	Events      [EventsLen]int32
 }
 
 // Kinds per preset, by star index. K.A.R.L.'s host is the blue-white giant.
@@ -534,6 +536,47 @@ func (w *World) updateState() {
 		s[o+5] = float64(stars.Class(math.Max(st.Temperature, 1000)))
 	}
 	w.updateBodies()
+	w.updateEffects()
+}
+
+// updateEffects lists the live gas shells, shocks and flash for the deck, sized as Render
+// draws them at reference scale.
+func (w *World) updateEffects() {
+	w.effectCount = 0
+	for k := 0; k < w.shellCount; k++ {
+		sh := &w.shells[k]
+		age := w.RealTime - sh.born
+		if age > shellLife {
+			continue
+		}
+		r := (w.Stars[sh.star].Radius + age*9) / referenceScale
+		w.putEffect(EffectShell, w.Sys.X[sh.star], w.Sys.Y[sh.star], r, 1-age/shellLife)
+	}
+	for k := 0; k < w.shockCount; k++ {
+		sk := &w.shocks[k]
+		age := w.SimTime - sk.born
+		if age > shockLife || age < 0 {
+			continue
+		}
+		w.putEffect(EffectShock, sk.x, sk.y, (6+age*70)/referenceScale, 1-age/shockLife)
+	}
+	if w.flash > 0 && w.shockCount > 0 {
+		sk := &w.shocks[w.shockCount-1]
+		w.putEffect(EffectFlash, sk.x, sk.y, 0, float64(w.flash)/10)
+	}
+	w.Effects[0] = float64(w.effectCount)
+}
+
+// putEffect appends one row to the effects buffer (a method, not a closure, so TinyGo never
+// heap-allocates per frame under the leaking GC).
+func (w *World) putEffect(kind int, x, y, r, strength float64) {
+	if w.effectCount >= EffectsRows {
+		return
+	}
+	o := 1 + w.effectCount*EffectWidth
+	w.Effects[o+EffectKind], w.Effects[o+EffectX], w.Effects[o+EffectY] = float64(kind), x, y
+	w.Effects[o+EffectRadius], w.Effects[o+EffectStrength] = r, strength
+	w.effectCount++
 }
 
 // updateBodies copies positions, velocities and per-kind extras into the bodies buffer.

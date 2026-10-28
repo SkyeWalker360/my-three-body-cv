@@ -34,6 +34,7 @@ type Exports = {
   framePtr(): number;
   eventsPtr(): number;
   bodiesPtr(): number;
+  effectsPtr(): number;
   frameWidth(): number;
   frameHeight(): number;
 };

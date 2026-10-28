@@ -39,6 +39,23 @@ const (
 	BodiesLen  = BodiesRows * BodyWidth
 )
 
+// Layout of the effects buffer (float64s) the observation deck reads: [count, then rows].
+// Radii are in world units (AU), matching what Render draws at reference scale.
+const (
+	EffectKind     = 0 // 1 gas shell, 2 supernova shock, 3 supernova flash
+	EffectX        = 1
+	EffectY        = 2
+	EffectRadius   = 3
+	EffectStrength = 4 // 1 when fresh, falling to 0 as it fades
+	EffectWidth    = 5
+	EffectsRows    = 13 // 8 shells + 4 shocks + 1 flash
+	EffectsLen     = 1 + EffectsRows*EffectWidth
+
+	EffectShell = 1
+	EffectShock = 2
+	EffectFlash = 3
+)
+
 // Event kinds in the event ring.
 const (
 	EventCollision   = 1 // a, b: the two stars

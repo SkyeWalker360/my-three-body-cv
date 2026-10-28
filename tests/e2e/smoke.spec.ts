@@ -294,3 +294,30 @@ test('the observation deck opens on the calm vantage, reads out in the DOM, and 
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
 });
+
+test("K.A.R.L.'s deck commands move the deck and narrate on request", async ({ page }) => {
+  await page.goto('/');
+  const karl = page.getByRole('button', { name: 'K.A.R.L.' });
+  await karl.click();
+  let input = page.getByRole('dialog').getByLabel('K.A.R.L.>');
+  await input.fill('/zoom 10');
+  await input.press('Enter');
+  const deck = page.getByRole('dialog', { name: 'OBSERVATION DECK' });
+  await expect(deck.getByText(/ZOOM 10\.0×/)).toBeVisible({ timeout: 10_000 });
+  // Ask K.A.R.L. on the deck: narration goes into the event log.
+  await deck.getByRole('button', { name: 'ASK K.A.R.L.' }).click();
+  await expect(
+    deck
+      .getByRole('region', { name: 'EVENTS' })
+      .getByText(/^K\.A\.R\.L\.:/)
+      .first(),
+  ).toBeVisible();
+  // Back in the terminal, /deck reads out the deck's status.
+  await page.keyboard.press('Escape');
+  await expect(deck).toBeHidden();
+  await karl.click();
+  input = page.getByRole('dialog', { name: /K\.A\.R\.L/ }).getByLabel('K.A.R.L.>');
+  await input.fill('/deck');
+  await input.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'OBSERVATION DECK' })).toBeVisible();
+});

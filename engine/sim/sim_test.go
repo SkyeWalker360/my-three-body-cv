@@ -176,3 +176,26 @@ func TestBodiesBufferMirrorsTheSystem(t *testing.T) {
 		}
 	}
 }
+
+func TestEffectsListShellsShockAndFlash(t *testing.T) {
+	w := &World{}
+	w.Init(318, 0)
+	w.Age()
+	seen := map[float64]bool{}
+	for i := 0; i < 60*10; i++ {
+		w.Advance(1000.0 / 60)
+		n := int(w.Effects[0])
+		for k := 0; k < n; k++ {
+			row := w.Effects[1+k*EffectWidth:]
+			seen[row[EffectKind]] = true
+			if row[EffectStrength] < 0 || row[EffectStrength] > 1 || row[EffectRadius] < 0 {
+				t.Fatalf("bad effect row %v", row[:EffectWidth])
+			}
+		}
+	}
+	for _, kind := range []float64{EffectShell, EffectShock, EffectFlash} {
+		if !seen[kind] {
+			t.Fatalf("effect kind %v never appeared", kind)
+		}
+	}
+}

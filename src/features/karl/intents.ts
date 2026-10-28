@@ -14,6 +14,10 @@ export const COMMANDS = [
   'exit',
   'karr',
   'lab',
+  'deck',
+  'vantage',
+  'focus',
+  'zoom',
 ] as const;
 export type Command = (typeof COMMANDS)[number];
 
@@ -21,7 +25,7 @@ export type Topic = 'core' | 'noctus' | 'skills' | 'contact' | 'help' | 'identit
 
 export type Intent =
   | { type: 'empty' }
-  | { type: 'command'; command: Command }
+  | { type: 'command'; command: Command; args?: string }
   | { type: 'entry'; id: string }
   | { type: 'topic'; topic: Topic }
   | { type: 'unknown'; input: string };
@@ -60,10 +64,13 @@ export function parseInput(raw: string, aliases: Record<string, string[]>): Inte
   if (!input) return { type: 'empty' };
 
   if (input.startsWith('/')) {
-    const name = input.slice(1).split(/\s+/)[0]!.toLowerCase();
-    return (COMMANDS as readonly string[]).includes(name)
-      ? { type: 'command', command: name as Command }
-      : { type: 'unknown', input };
+    const [head, ...rest] = input.slice(1).split(/\s+/);
+    const name = head!.toLowerCase();
+    const args = rest.join(' ').trim();
+    if (!(COMMANDS as readonly string[]).includes(name)) return { type: 'unknown', input };
+    return args
+      ? { type: 'command', command: name as Command, args }
+      : { type: 'command', command: name as Command };
   }
 
   const text = normalise(input);
