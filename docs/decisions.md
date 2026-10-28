@@ -23,8 +23,10 @@ the manifest that don't exist yet. Its Phase 6 box stays unticked.
 ## D4. Stacked PRs, unmerged
 
 Merging needs Luke's approval, so each feature is its own branch built on the previous one, with
-its PR based on that branch. Merge them in order, oldest first; GitHub retargets the next PR to
-`main` as each one merges.
+its PR based on that branch. GitHub only retargets a stacked PR to `main` when its base branch
+is deleted on merge, which this repo doesn't do, so #3–#6 merged into each other rather than
+`main`. PR #7 brings the whole stack into `main` in one merge. Next time: turn on "Automatically
+delete head branches", or merge the top PR straight into `main`.
 
 ## D5. Stellar ramp colours
 
