@@ -37,10 +37,26 @@ export const STATE = {
   civil: 12,
   lights: 13,
   critical: 14,
+  bodies: 15,
   stars: 16,
   starWidth: 6,
   length: 34,
 } as const;
+
+/** One row per body in the bodies buffer (stars first; rows 0–2 are stars 0–2). */
+export const BODY = {
+  x: 0,
+  y: 1,
+  vx: 2,
+  vy: 3,
+  mass: 4,
+  kind: 5,
+  /** Star: luminosity in Suns. Planet: received light (Sun = 1). Fragment: age in seconds. */
+  extra: 6,
+  width: 7,
+  rows: 64,
+} as const;
+export const BODY_KINDS = ['star', 'planet', 'fragment'] as const;
 
 export const EVENT = {
   collision: 1,

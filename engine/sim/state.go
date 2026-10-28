@@ -18,9 +18,25 @@ const (
 	StateCivil     = 12
 	StateLights    = 13
 	StateCritical  = 14
+	StateBodies    = 15 // how many rows of the bodies buffer are in use
 	StateStars     = 16 // per star: kind, phase, temperature, radius, progress, class
 	StateStarWidth = 6
 	StateLen       = StateStars + 3*StateStarWidth
+)
+
+// Layout of the bodies buffer (float64s) the observation deck reads: one row per body in
+// the system, stars first (rows 0–2 are always stars 0–2).
+const (
+	BodyX      = 0
+	BodyY      = 1
+	BodyVX     = 2
+	BodyVY     = 3
+	BodyMass   = 4
+	BodyKind   = 5 // 0 star, 1 planet, 2 fragment
+	BodyExtra  = 6 // star: luminosity in Suns; planet: received light (Sun = 1); fragment: age in s
+	BodyWidth  = 7
+	BodiesRows = 64 // physics.MaxBodies
+	BodiesLen  = BodiesRows * BodyWidth
 )
 
 // Event kinds in the event ring.

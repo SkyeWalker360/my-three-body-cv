@@ -176,3 +176,50 @@ mode was built without adding or changing any CV text.
   rows thick with a dithered `gold-1` bloom up to 3 px outside the band (away from the text),
   and a toast ("INSPECTING · N FOUND · M TO EXIT") shows for 3 s when the mode comes on, then
   hides so it never sits over CV text.
+
+## D11. Observation Deck, Phase 1 (28 Oct 2026)
+
+Built from `docs/Observation Deck — Viewing Platform Brief.md`. Luke took every recommendation
+in §9: calm default above the plane, large window with a thin frame, K.A.R.L. narrates only when
+asked, compact labelled scale.
+
+- **Where it lives.** A full-screen modal dialog opened from the lab panel ("ENTER THE
+  OBSERVATION DECK"), lazily loaded like the other eggs. The live background stays behind the CV
+  (Design Brief layer 1). The deck's code sits inside the three-body feature
+  (`src/features/three-body/deck/`) because it replaces the Lab, which lets it reuse the engine
+  loader without one feature importing another.
+- **Its own engine.** The deck instantiates `engine.wasm` a second time, so pausing or warping
+  the deck never touches the background. The engine gained a bodies buffer (position, velocity,
+  mass, kind, luminosity per body; `bodiesPtr()`, `StateBodies`), mirrored and tested in
+  `engine-layout.ts` like the other offsets. The WASM build stays 24 KB gzipped.
+- **Platform physics in TypeScript, not Go.** The engine is planar; the platform needs height
+  above the plane. It's a massless test particle (so energy telemetry stays exact) integrated
+  with leapfrog against the stars' positions each frame, with a capped station-keeping thrust.
+  Tests cover free-fall energy, holding a station, and failing to hover where gravity beats the
+  cap.
+- **Compact scale = the lab's sizes.** Bodies are drawn at the radius the engine draws them
+  (engine pixels ÷ 67.5 px/AU), so the deck agrees with the lab's collisions and engulfments.
+  Distances are true AU. The console says so, and shows each body's true angular size and the
+  magnification ("drawn ×1218" for the planet). True radii: red dwarf 0.3, Sun 1, blue-white
+  giant 7 solar radii; giants grow to ~100 solar radii via a power of the engine's pixel growth;
+  white dwarf 0.012 solar radii; black hole at its Schwarzschild radius.
+- **Brightness and exposure.** Radiance = (L / d²) over the disc's solid angle (or one pixel for
+  a point). Exposure targets the brightest thing in view, adapting faster to glare (0.12 s) than
+  to dark (0.6 s); reduced motion adapts instantly. A logarithmic tone curve spans 3.5 decades,
+  so a red dwarf beside the blue giant still shows, dimly. Exposure is capped so that an empty
+  sky's brightest star (mag −1.5) is white; consequence: with any of the system's stars in view
+  the Milky Way and background stars drop out, as they do in real photos. They reappear when you
+  look away.
+- **Rendering.** Canvas 2D, 320 px wide buffer, integer upscale, the engine's palette and colour
+  table. Stars use a TypeScript mirror of the engine's `StellarTones` (unit-tested against
+  `palette.go`) with linear limb darkening; overexposed cores go to the white step. Planets are
+  lit per pixel by every star (Lambert, weighted by flux), which already gives multi-star phases.
+  The black hole is drawn as its shadow and a cyan/red photon ring; lensing is Phase 2.
+- **Interior** is placeholder art built from palette steps in code (frame, scanner bar using the
+  shared `larsonLevels`, console LEDs, two seat backs), lit by the starlight reaching the deck and
+  rim-tinted by the strongest star's class. It's meant to be replaced by Luke's Aseprite frame.
+- **Cost.** About 0.9 ms per frame at 320×180 and 1.7 ms for a tall phone buffer (Node), inside
+  the 4 ms budget.
+- **Vantages in Phase 1:** above the plane (2.6 AU, so the ±1.9 AU escape circle fits the 100°
+  window), barycentre (0.35 AU above it) and free look (holds where it was chosen). Switching is
+  a jump for now; guided transits and the other vantages are Phase 4.

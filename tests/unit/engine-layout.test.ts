@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ENGINE_PALETTE, EVENT, MAX_PIXELS, STATE } from '@/features/three-body/engine-layout';
+import {
+  BODY,
+  ENGINE_PALETTE,
+  EVENT,
+  MAX_PIXELS,
+  STATE,
+} from '@/features/three-body/engine-layout';
 
 const state = readFileSync('engine/sim/state.go', 'utf8');
 const palette = readFileSync('engine/raster/palette.go', 'utf8');
@@ -38,6 +44,7 @@ describe('engine layout mirror', () => {
       civil: 'StateCivil',
       lights: 'StateLights',
       critical: 'StateCritical',
+      bodies: 'StateBodies',
       stars: 'StateStars',
       starWidth: 'StateStarWidth',
     };
@@ -45,6 +52,23 @@ describe('engine layout mirror', () => {
       expect(STATE[key as keyof typeof STATE], key).toBe(goConst(state, go));
     }
     expect(STATE.length).toBe(STATE.stars + 3 * STATE.starWidth);
+  });
+
+  it('uses the Go bodies layout', () => {
+    const map: Record<string, string> = {
+      x: 'BodyX',
+      y: 'BodyY',
+      vx: 'BodyVX',
+      vy: 'BodyVY',
+      mass: 'BodyMass',
+      kind: 'BodyKind',
+      extra: 'BodyExtra',
+      width: 'BodyWidth',
+      rows: 'BodiesRows',
+    };
+    for (const [key, go] of Object.entries(map)) {
+      expect(BODY[key as keyof typeof BODY], key).toBe(goConst(state, go));
+    }
   });
 
   it('uses the Go event kinds and frame limit', () => {

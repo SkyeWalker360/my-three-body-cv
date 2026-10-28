@@ -101,6 +101,7 @@ type World struct {
 	bg    [raster.MaxPixels]uint8
 
 	State  [StateLen]float64
+	Bodies [BodiesLen]float64
 	Events [EventsLen]int32
 }
 
@@ -531,6 +532,28 @@ func (w *World) updateState() {
 		}
 		s[o], s[o+1], s[o+2], s[o+3], s[o+4] = kind, float64(st.Phase), st.Temperature, st.Radius, st.Progress
 		s[o+5] = float64(stars.Class(math.Max(st.Temperature, 1000)))
+	}
+	w.updateBodies()
+}
+
+// updateBodies copies positions, velocities and per-kind extras into the bodies buffer.
+func (w *World) updateBodies() {
+	n := w.Sys.N
+	w.State[StateBodies] = float64(n)
+	for i := 0; i < n; i++ {
+		row := w.Bodies[i*BodyWidth : (i+1)*BodyWidth]
+		row[BodyX], row[BodyY] = w.Sys.X[i], w.Sys.Y[i]
+		row[BodyVX], row[BodyVY] = w.Sys.VX[i], w.Sys.VY[i]
+		row[BodyMass] = w.Sys.M[i]
+		row[BodyKind] = float64(w.kind[i])
+		switch w.kind[i] {
+		case kindStar:
+			row[BodyExtra] = w.Stars[i].Luminance()
+		case kindPlanet:
+			row[BodyExtra] = w.flux
+		default:
+			row[BodyExtra] = w.RealTime - w.born[i]
+		}
 	}
 }
 
