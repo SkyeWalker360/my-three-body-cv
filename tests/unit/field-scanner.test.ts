@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import raw from '@content/cv-manifest.json';
 import { parseLogbook, serializeLogbook } from '@/features/field-scanner/logbook';
-import { INITIAL, step } from '@/features/field-scanner/navigation';
+import { CHEAT, cheatProgress, INITIAL, step } from '@/features/field-scanner/navigation';
 import { buildRegions } from '@/features/field-scanner/regions';
 import {
   DUST,
@@ -172,5 +172,21 @@ describe('field scanner sprites', () => {
     const s = silhouette(specimenSprite('x', 'star', 'star', 0));
     expect(s.ramps).toEqual(['void']);
     expect(new Set([...s.cells].filter((v) => v >= 0))).toEqual(new Set([2]));
+  });
+});
+
+describe('cheat code', () => {
+  const enter = (presses: readonly string[]) =>
+    presses.reduce((p, a) => cheatProgress(p, a as (typeof CHEAT)[number]), 0);
+
+  it('completes on ▲ ▲ ▼ ▼ ◀ ▶ ◀ ▶ B A', () => {
+    expect(enter(CHEAT)).toBe(CHEAT.length);
+  });
+
+  it('resets on a wrong press, keeping a trailing ▲ as a fresh start', () => {
+    expect(enter(['up', 'up', 'down', 'a'])).toBe(0);
+    expect(enter(['up', 'up', 'up', ...CHEAT.slice(2)])).toBe(CHEAT.length);
+    expect(enter(['up', 'down', 'up', ...CHEAT])).toBe(CHEAT.length);
+    expect(enter(CHEAT.slice(0, -1))).toBe(CHEAT.length - 1);
   });
 });

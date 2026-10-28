@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOSS_HP, phaseOf } from '@/features/shooter/boss';
+import { BOSS_HP, BOSS_SIZE, bossSize, phaseOf } from '@/features/shooter/boss';
 import {
   createGame,
   fragment,
@@ -99,5 +99,14 @@ describe('shooter engine', () => {
     update(g, { ...idle, fire: true }, 0.01, rng);
     expect(g.bullets.filter((b) => !b.hostile)).toHaveLength(1);
     expect(g.bullets[0]!.vy).toBeLessThan(0);
+  });
+});
+
+describe('boss size', () => {
+  it('fits the field in whole-number steps of the 32 px photo', () => {
+    expect(bossSize(1280)).toBe(BOSS_SIZE);
+    expect(bossSize(360)).toBe(128);
+    expect(bossSize(100)).toBe(64);
+    for (const w of [200, 390, 640, 1000]) expect(bossSize(w) % 64).toBe(0);
   });
 });

@@ -28,7 +28,7 @@ export default function EasterEggs() {
   const [cursor, setCursor] = useState(false);
   const [karl, setKarl] = useState<{ command?: string } | null>(null);
   const [shooter, setShooter] = useState(false);
-  const [scanner, setScanner] = useState(false);
+  const [scanner, setScanner] = useState<{ arcade?: boolean } | null>(null);
   const [inspection, setInspection] = useState(false);
   const [deck, setDeck] = useState<{
     view?: 'deck' | 'lab';
@@ -53,7 +53,7 @@ export default function EasterEggs() {
     // The first request mounts the feature; after that, the feature listens for itself.
     const offKarl = on('karl:open', (d) => setKarl((k) => k ?? d ?? {}));
     const offShooter = on('shooter:launch', () => setShooter(true));
-    const offScanner = on('scanner:open', () => setScanner(true));
+    const offScanner = on('scanner:open', (d) => setScanner((s) => s ?? d));
     const offInspection = on('inspection:toggle', () => setInspection(true));
     const offDeckCommand = on('deck:command', (c) => deckQueue.current?.push(c));
     const offDeck = on('deck:open', (d) => {
@@ -87,7 +87,7 @@ export default function EasterEggs() {
       {cursor && <ShipCursor />}
       {karl && <Terminal initialCommand={karl.command} />}
       {shooter && <ShooterOverlay autoStart />}
-      {scanner && <Scanner />}
+      {scanner && <Scanner initialArcade={scanner.arcade} />}
       {inspection && <Inspection />}
       {deck && <Deck initialView={deck.view} initialCommands={deck.commands} />}
     </>

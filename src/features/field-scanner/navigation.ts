@@ -59,3 +59,28 @@ export function step(
       return s;
   }
 }
+
+/** ▲ ▲ ▼ ▼ ◀ ▶ ◀ ▶ B A on the scanner's buttons: the hidden handheld arcade. */
+export const CHEAT: readonly ScannerAction['type'][] = [
+  'up',
+  'up',
+  'down',
+  'down',
+  'left',
+  'right',
+  'left',
+  'right',
+  'b',
+  'a',
+];
+
+/**
+ * How far into CHEAT the presses have got after `action`, given `progress` so far.
+ * CHEAT.length means the code is complete. A wrong press restarts the count, keeping a
+ * trailing ▲ (or ▲ ▲) as the start of a new attempt.
+ */
+export function cheatProgress(progress: number, action: ScannerAction['type']): number {
+  if (action === CHEAT[progress]) return progress + 1;
+  if (action !== 'up') return 0;
+  return progress === 2 ? 2 : 1;
+}

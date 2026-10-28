@@ -87,7 +87,7 @@ test('ENGAGE produces shootable asteroids and Space does not scroll', async ({
   page,
   isMobile,
 }) => {
-  test.skip(isMobile, 'The shooter needs a keyboard.');
+  test.skip(isMobile, 'On a phone the shooter plays on the field scanner.');
   await page.goto('/');
   await page.getByRole('button', { name: /engage weapons/i }).click();
   await expect(page.getByRole('status')).toContainText(/\d+ CV blocks became asteroids/);
@@ -119,7 +119,7 @@ test('the ship cursor only replaces the native cursor with a mouse', async ({ pa
 });
 
 test('the shooter can be replayed without reloading', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'The shooter needs a keyboard.');
+  test.skip(isMobile, 'On a phone the shooter plays on the field scanner.');
   await page.goto('/');
   const launch = page.getByRole('button', { name: /engage weapons/i });
   for (let run = 0; run < 2; run++) {
@@ -322,23 +322,54 @@ test("K.A.R.L.'s deck commands move the deck and narrate on request", async ({ p
   await expect(page.getByRole('dialog', { name: 'OBSERVATION DECK' })).toBeVisible();
 });
 
-test('the shooter is playable on a phone with the on-screen pad', async ({ page, isMobile }) => {
-  test.skip(!isMobile, 'The pad is for touch screens.');
+test('on a phone, ENGAGE plays the shooter on the field scanner', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'The handheld arcade is for touch screens.');
   await page.goto('/');
   await page.getByRole('button', { name: /engage weapons/i }).tap();
-  await expect(page.getByRole('status')).toContainText(/\d+ CV blocks became asteroids/);
-  // A phone shows one card at a time; the field is topped up from the manifest.
-  const count = Number(/(\d+) CV blocks/.exec((await page.getByRole('status').textContent())!)![1]);
-  expect(count).toBeGreaterThanOrEqual(4);
-  const pad = page.getByRole('group', { name: 'Ship controls' });
-  for (const name of ['Rotate left', 'Rotate right', 'Thrust', 'Brake', 'Fire']) {
-    const box = (await pad.getByRole('button', { name }).boundingBox())!;
+  const dialog = page.getByRole('dialog', { name: /scanner/i });
+  const arcade = dialog.getByRole('region', { name: 'Arcade' });
+  await expect(arcade.getByRole('status')).toContainText(/\d+ CV entries became asteroids/);
+  // The page itself is untouched: the field comes from the manifest.
+  await expect(page.locator('[data-destructible][style*="hidden"]')).toHaveCount(0);
+  const controls = dialog.getByRole('group', { name: 'Controls' });
+  for (const name of ['Rotate left', 'Rotate right', 'Thrust', 'Brake', 'A, fire']) {
+    const box = (await controls.getByRole('button', { name }).boundingBox())!;
     expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
   }
-  // Hold fire and thrust for a moment: the ship flies and shoots without a keyboard.
-  const fire = (await pad.getByRole('button', { name: 'Fire' }).boundingBox())!;
+  const fire = (await controls.getByRole('button', { name: 'A, fire' }).boundingBox())!;
   await page.touchscreen.tap(fire.x + fire.width / 2, fire.y + fire.height / 2);
-  await page.screenshot({ path: 'test-results/shooter-touch.png' });
-  await page.getByRole('button', { name: /quit/i }).tap();
-  await expect(page.locator('[data-destructible][style*="hidden"]')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/shooter-handheld.png' });
+  // B leaves the arcade for the scanner; the scanner stays open.
+  await controls.getByRole('button', { name: 'B, leave arcade' }).tap();
+  await expect(arcade).toBeHidden();
+  await expect(dialog.getByRole('region', { name: 'Viewer' })).toBeVisible();
+});
+
+test('the scanner hides an arcade behind a cheat code', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'OPEN FIELD SCANNER' }).click();
+  const dialog = page.getByRole('dialog', { name: /scanner/i });
+  await expect(dialog).toBeVisible();
+  for (const key of [
+    'ArrowUp',
+    'ArrowUp',
+    'ArrowDown',
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowLeft',
+    'ArrowRight',
+    'x',
+    'z',
+  ]) {
+    await page.keyboard.press(key);
+  }
+  const arcade = dialog.getByRole('region', { name: 'Arcade' });
+  await expect(arcade.getByRole('status')).toContainText(/became asteroids/);
+  // Escape leaves the arcade first, then closes the scanner.
+  await page.keyboard.press('Escape');
+  await expect(arcade).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });

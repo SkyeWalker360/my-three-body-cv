@@ -17,7 +17,7 @@ export function Footer({ person }: { person: CvManifest['person'] }) {
             Turns the CV on screen into asteroids. Clear them to meet The Architect.
             <br />
             <kbd>W A S D</kbd> or arrow keys to fly · <kbd>Space</kbd> to fire · <kbd>Esc</kbd> to
-            quit. On a phone, hold the on-screen buttons.
+            quit. On a phone it plays on the field scanner.
           </p>
         </div>
         <div className="space-y-4">
