@@ -165,6 +165,41 @@ Each Easter egg is optional, lazy-loaded, and must never block reading the CV.
 - **Boss, "The Architect":** 128×128 sprite, 3 phases by HP: 100–66% syntax barrage, 66–33% magnetic flux pull, 33–0% supernova overdrive.
 - **End:** an in-canvas victory or defeat screen with the score, a Restore website button that fades the DOM back in, and a full state reset so it can be replayed. No `alert()`.
 
+## Visual upgrades
+
+The background stops being three coloured dots and becomes a small living star system, drawn in pixels. These upgrades come from the Gemini report *Architectural and Astrophysical Synthesis of a Milky Way Three-Body WebAssembly Simulation Engine* (in Luke's Drive). Only the parts a visitor can see made it in. The engine section below covers how they are computed.
+
+Every upgrade follows the pixel rules above: a low-res buffer, integer coordinates, palette colours only, integer upscaling.
+
+| Upgrade | What the visitor sees | How it's drawn | Driven by |
+| --- | --- | --- | --- |
+| Stars by temperature | A dim red dwarf, a yellow sun and a blue-white giant instead of three flat dots | Blackbody colour from temperature (Tanner Helland fit), snapped to the nearest step of a 6-step stellar ramp | Engine: each star's temperature |
+| Dithered star sprites | Round, shaded stars with darker edges and a slowly boiling surface | 64×64 sprite per star: spherical normal, edge darkening, value noise, 4×4 Bayer dither into 5 tones of the star's ramp | Engine: radius, temperature, spin |
+| Orbit trails | Fading tails that show the chaos | 80-point trail per body, fading over 4 palette steps; 1 px wide | Engine: positions |
+| Chaos ghost | A faint copy of one star that slowly splits away from the real one | Shadow body started 10⁻⁷ off; drawn at 25% opacity; HUD shows the gap | Engine: shadow run |
+| Dying star | A giant that swells, pulses and sheds rings of gas | Radius pulse plus 2–3 detached dithered shells that fade outward | Engine: stellar phase |
+| Supernova | A white flash, a shock ring, then 10–20 glowing fragments that keep orbiting | Flash frame, expanding 1 px ring, fragments as 2×2 particles | Engine: event |
+| Black hole | A black disc ringed by a thin bright ring, with a disk that's cyan on one side and red on the other | Pre-rendered 16-frame sprite sheet (photon ring, lensed arch, Doppler-tinted disk). Never ray-marched live | Engine: remnant type |
+| Planet eras | A planet whose surface shifts between oceans, scorched rifts and ice | 32×32 sprite with three palette-swapped biome sets; 1 px gold city lights on the night side once a civilisation reaches the electrical era | Engine: planet's received light |
+| K.A.R.L. core | An exposed white core inside hexagonal containment rings | 64×64 canvas in the terminal header; rings pulse with the star's phase | Engine: K.A.R.L.'s host star |
+| KITT / KARR scanner | 12-cell Larson scanner with a 6-cell fading tail, red by default, amber when the star goes critical | 12 DOM cells, CSS only; sweep 0.4–1.2 s | Event bus: `core:critical` |
+| NDT inspection mode | Press M: the ship turns into an inspection probe and hidden weld defects in panel borders light up as fluorescent lines | Defect paths in SVG over card borders; particles drift toward each path, then hold as a glowing line | Cursor feature; no engine needed |
+
+Colour rules for these upgrades:
+
+- **New ramp.** Add a 6-step stellar ramp to the tokens and the Aseprite palette: deep red → orange → yellow → white → pale blue → blue-white. Blackbody colours snap to it, so stars stay on-palette.
+- **Report colours.** The report's hex values (#D93025, #FCC934, #81C995) are Google's palette. Use `--color-red` for KITT, `--color-gold` for KARR and NDT indications, and `--color-green` for passed inspections.
+- **Black hole disk.** The bright side uses the cyan ramp and the dim side uses the red ramp, so the Doppler effect reads in site colours.
+
+NDT inspection mode rules:
+
+- Reveals at most 3 defects per card and never covers CV text.
+- Clicking an indication opens a short write-up (an inspection or engineering case study) from the manifest; nothing is invented.
+- Keyboard path: M toggles the mode, Tab moves between found indications, Enter opens one.
+- Off with reduced motion: indications appear as static outlines instead.
+
+What stays out of the visuals: the Milky Way potential, Kustaanheimo–Stiefel regularisation, post-Newtonian drag and the 200k-particle WebGPU field. They change nothing on screen at this scale.
+
 ## Technical constraints for Claude Code
 
 The stack is fixed: change it only with Luke's sign-off. Everything else in this section is a hard rule that a PR must meet before merge.
@@ -197,6 +232,55 @@ Rules for every PR:
 6. **Animation loops:** each loop pauses on `visibilitychange` and when its feature is hidden. No `setInterval` animations.
 7. **Scope:** one phase or feature per PR, with screenshots or a short GIF for anything visual. The prototype file stays in `reference/` and is never imported.
 
+## Pixel simulation engine
+
+The three-body lab runs on a small engine written in Go and compiled to WebAssembly with TinyGo. It is a portfolio piece in its own right: Go is already on the CV, and this makes it visible. The engine does the physics, the star lifecycles and the pixel drawing. JavaScript only puts the finished frame on screen.
+
+The same Go code builds twice: for the browser, and natively for tests and for baking sprite sheets (the black hole) at build time.
+
+Language choice:
+
+| Option | For | Against | Verdict |
+| --- | --- | --- | --- |
+| Go via TinyGo | On the CV; small binaries; the same code runs natively for tests and baking | Smaller standard library; garbage collector, so no allocation in the hot loop | Chosen |
+| Rust via wasm-pack | Smallest, fastest output; no garbage collector; best WASM tooling | Not on the CV; a new language to learn first | Good fallback if TinyGo hits a wall |
+| Ebitengine (Go game engine) | Full 2D engine with pixel-perfect scaling, input and audio; named in the Research Recap | Builds with standard Go, so binaries run to megabytes; too heavy for a CV Easter egg | Use it later for the separate video game site |
+| Standard Go (`GOOS=js`) | Full standard library | Ships the full runtime, so binaries run to megabytes | No |
+| TypeScript only | No extra toolchain | Shows nothing new | Kept as the reference solver and fallback |
+
+Scope for v1:
+
+- **Bodies:** up to 64 (3 stars, 1 planet, 1 chaos ghost, up to 20 fragments), all in float64.
+- **Integrator:** 4th-order Yoshida (Forest–Ruth) symplectic step on a fixed timestep, with the barycentric zero-momentum correction on every preset load and kick.
+- **Diagnostics:** energy, momentum, angular momentum, |ΔE / E₀|, and the gap between a star and its ghost.
+- **Presets:** Figure-8, Lagrange, Moth-I, Trisolaran, unequal-mass, and a hierarchical triple (close pair plus a distant star).
+- **Stars:** a simplified lifecycle (main sequence → giant → white dwarf, neutron star or black hole) from lookup tables, on a sped-up clock. Not the full Hurley fits.
+- **Events:** collision, supernova, engulfment and ejection, written to an event ring that the page turns into bus events.
+- **Planet:** light received from all three stars sets its era (stable, scorched or frozen); stable eras advance a civilisation counter.
+- **Pixels:** the engine draws a 480×270 framebuffer of palette indices; the page maps each index to a palette colour.
+
+Later, not v1: Wisdom–Holman steps for hierarchical systems, Kustaanheimo–Stiefel regularisation for close passes, and a headless renderer that exports GIFs for the README.
+
+Interface (C-ABI exports; the page reads memory directly and copies nothing):
+
+| Export | What it does |
+| --- | --- |
+| `init(seed, preset)` | Resets the system from a preset and a seed |
+| `advance(ms)` | Runs as many fixed steps as `ms` of real time needs, so speed is the same at 60 Hz and 120 Hz |
+| `render()` | Draws the current frame into the framebuffer |
+| `kick(body, dvx, dvy)` | Adds velocity to one body, then re-centres |
+| `statePtr()`, `framePtr()`, `eventsPtr()` | Offsets of the state, frame and event buffers in WASM memory |
+
+Engine rules:
+
+- **Deterministic.** A seeded PCG random generator, a fixed timestep and no map-order dependence. The same seed gives the same frames, so a run can be shared as a link.
+- **Lazy.** The WASM loads only when a visitor opens the lab, so it doesn't count against the pre-interaction JS budget.
+- **Small and fast.** `engine.wasm` is at most 60 KB gzipped, checked in CI. `advance` plus `render` takes at most 4 ms per frame on a mid-range laptop.
+- **Off the main thread.** It runs in a Web Worker, drawing to an OffscreenCanvas where supported.
+- **Safe fallback.** If WASM fails to load, the TypeScript solver from Phase 2 runs instead, without the extras.
+- **Tested both ways.** `go test` checks energy drift, momentum and determinism. A parity test runs the Go and TypeScript solvers on the same preset and compares them within a tolerance.
+- **CV entry only when shipped.** The engine goes on the CV and in the manifest only after it's live, in Luke's own words.
+
 ## Repo structure and conventions
 
 The code is organised by feature: each Easter egg lives in its own folder and talks to the rest of the site only through a small event bus.
@@ -212,21 +296,28 @@ my-three-body-cv/
 ├─ content/
 │  ├─ cv-manifest.json         # single source of truth
 │  └─ noctus/act-1.ink … act-4.ink
+├─ engine/                    # Go module, built with TinyGo (Phase 6)
+│  ├─ physics/                 # bodies, Yoshida-4 step, presets, diagnostics
+│  ├─ stars/                   # lifecycle tables, events
+│  ├─ raster/                  # framebuffer, dithered sprites, trails
+│  ├─ wasm/main.go             # C-ABI exports for the browser
+│  └─ cmd/bake/                # native tool: bakes sprite sheets to public/sprites
 ├─ public/
 │  ├─ cv.pdf
-│  └─ sprites/                 # Aseprite exports (ship 16 frames, boss)
+│  ├─ engine.wasm              # build output, lazy-loaded
+│  └─ sprites/                 # Aseprite exports and baked sheets
 ├─ src/
 │  ├─ app/                     # layout.tsx, page.tsx, globals.css (@theme tokens)
 │  ├─ components/cv/           # Hero, ExperienceCard, Filters, Skills, Contact
 │  ├─ features/
-│  │  ├─ three-body/           # solver.ts, presets.ts, worker.ts, Canvas.tsx
-│  │  ├─ cursor/               # ShipCursor.tsx, particles.ts
-│  │  ├─ karl/                 # Terminal.tsx, machine.ts, intents.ts, CoreGauge.tsx
+│  │  ├─ three-body/           # solver.ts (reference), engine.ts (WASM loader), worker.ts, Canvas.tsx
+│  │  ├─ cursor/               # ShipCursor.tsx, particles.ts, inspect.ts (NDT mode)
+│  │  ├─ karl/                 # Terminal.tsx, machine.ts, intents.ts, CoreGauge.tsx, Scanner.tsx
 │  │  ├─ noctus/               # InkRunner.tsx, dice.ts
 │  │  └─ shooter/              # engine.ts, harvest.ts, boss.ts, Overlay.tsx
 │  └─ lib/                     # manifest.ts (Zod), events.ts (bus), motion.ts
-├─ tests/                     # Vitest unit tests, Playwright e2e
-└─ .github/workflows/ci.yml
+├─ tests/                     # Vitest unit tests, Playwright e2e, Go/TS parity fixtures
+└─ .github/workflows/ci.yml   # adds: tinygo build, go test, wasm size check
 ```
 
 Conventions:
@@ -271,9 +362,20 @@ A phase is done when every box under it is ticked, and phases ship in order.
 - [x] Keyboard controls match the on-screen label; Space doesn't scroll the page
 - [x] The boss runs 3 phases; victory restores the DOM; a replay works without reloading
 
+**Phase 6: Pixel engine and visual upgrades**
+
+- [ ] `engine/` builds with TinyGo; `engine.wasm` is 60 KB gzipped or less, checked in CI
+- [ ] `go test` passes: |ΔE / E₀| stays under 10⁻⁶ over 10⁵ steps on Figure-8, net momentum stays zero, and the same seed gives byte-identical frames
+- [ ] The Go and TypeScript solvers agree on every preset within the parity tolerance
+- [ ] The lab runs in a Web Worker at 60 Hz with `advance` + `render` at 4 ms or less per frame; it falls back to the TypeScript solver if WASM fails
+- [ ] Stars use the stellar ramp and the dithered sprite; no off-palette pixel appears in a captured frame
+- [ ] The black hole sprite sheet is baked by `cmd/bake` at build time, not drawn live
+- [ ] A supernova fires an engine event that turns the K.A.R.L. scanner amber
+- [ ] NDT inspection mode works by keyboard, never covers CV text, and shows static outlines with reduced motion
+
 Out of scope for now:
 
-- The home-lab leaderboard API and the LLM fallback for K.A.R.L. (phase 6)
+- The home-lab leaderboard API and the LLM fallback for K.A.R.L. (phase 7)
 - The blog and games sections (routes reserved only)
 - WebGL or Three.js rendering, multiplayer, and user accounts
 
