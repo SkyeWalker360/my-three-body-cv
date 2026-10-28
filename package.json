@@ -18,6 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "palette": "tsx scripts/export-palette.ts",
+    "qol": "tsx scripts/qol-audit.ts",
     "engine": "cd engine && tinygo build -o ../public/engine.wasm -target wasm-unknown -opt=z -no-debug -gc=leaking -panic=trap ./wasm",
     "engine:generate": "cd engine && go run ./cmd/bake && go run ./cmd/parity",
     "engine:check": "tsx scripts/check-engine.ts",

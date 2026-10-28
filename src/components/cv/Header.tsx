@@ -6,7 +6,7 @@ export function Header({ person }: { person: CvManifest['person'] }) {
   return (
     <header className="sticky top-0 z-20 border-b border-cyan/30 bg-void/80 px-4 py-2 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-        <a href="#top" className="flex min-w-0 items-center gap-3 text-ink no-underline">
+        <a href="#top" className="flex min-h-11 min-w-11 items-center gap-3 text-ink no-underline">
           <span
             aria-hidden="true"
             className="flex size-8 shrink-0 items-center justify-center bg-cyan font-pixel text-xs text-void shadow-[4px_4px_0_0_var(--color-gold)]"

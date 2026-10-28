@@ -373,3 +373,36 @@ test('the scanner hides an arcade behind a cheat code', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 });
+
+test('every exit is at least 44 px and on screen', async ({ page }) => {
+  const check = async (name: RegExp | string) => {
+    const box = (await page
+      .getByRole('button', { name, exact: typeof name === 'string' })
+      .boundingBox())!;
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+    const vp = page.viewportSize()!;
+    expect(
+      box.x >= 0 && box.y >= 0 && box.x + box.width <= vp.width && box.y + box.height <= vp.height,
+    ).toBe(true);
+  };
+  await page.goto('/');
+  await page.getByRole('button', { name: 'K.A.R.L.' }).click();
+  await check('Close K.A.R.L.');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'OPEN FIELD SCANNER' }).click();
+  await check('Close field scanner');
+  await check('B, back');
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('button', { name: /OBSERVATION DECK/ })
+    .first()
+    .click();
+  await check('EXIT');
+  await page.keyboard.press('Escape');
+  // Inspection mode keeps an exit on screen wherever the page is scrolled.
+  await page.getByRole('button', { name: 'INSPECT THE WELDS (M)' }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await check('✕ END INSPECTION');
+  await page.getByRole('button', { name: '✕ END INSPECTION' }).click();
+  await expect(page.getByRole('button', { name: '✕ END INSPECTION' })).toBeHidden();
+});
