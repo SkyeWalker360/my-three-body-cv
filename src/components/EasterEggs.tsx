@@ -11,12 +11,14 @@ const ThreeBodyCanvas = dynamic(() => import('@/features/three-body/Canvas'), { 
 const ShipCursor = dynamic(() => import('@/features/cursor/ShipCursor'), { ssr: false });
 const Terminal = dynamic(() => import('@/features/karl/Terminal'), { ssr: false });
 const ShooterOverlay = dynamic(() => import('@/features/shooter/Overlay'), { ssr: false });
+const Scanner = dynamic(() => import('@/features/field-scanner/Scanner'), { ssr: false });
 
 export default function EasterEggs() {
   const [background, setBackground] = useState(false);
   const [cursor, setCursor] = useState(false);
   const [karl, setKarl] = useState<{ command?: string } | null>(null);
   const [shooter, setShooter] = useState(false);
+  const [scanner, setScanner] = useState(false);
 
   useEffect(() => {
     const load = () => {
@@ -34,10 +36,12 @@ export default function EasterEggs() {
     // The first request mounts the feature; after that, the feature listens for itself.
     const offKarl = on('karl:open', (d) => setKarl((k) => k ?? d ?? {}));
     const offShooter = on('shooter:launch', () => setShooter(true));
+    const offScanner = on('scanner:open', () => setScanner(true));
     return () => {
       cancelIdle();
       offKarl();
       offShooter();
+      offScanner();
     };
   }, []);
 
@@ -47,6 +51,7 @@ export default function EasterEggs() {
       {cursor && <ShipCursor />}
       {karl && <Terminal initialCommand={karl.command} />}
       {shooter && <ShooterOverlay autoStart />}
+      {scanner && <Scanner />}
     </>
   );
 }

@@ -142,3 +142,32 @@ test('the Go engine loads and a star can be aged into a supernova', async ({ pag
   await expect(page.getByText(/left the main sequence/)).toBeVisible();
   await expect(page.getByText(/Supernova!/)).toBeVisible({ timeout: 15_000 });
 });
+
+test('the field scanner opens, logs a specimen from the manifest, and closes on Escape', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const opener = page.getByRole('button', { name: 'OPEN FIELD SCANNER' });
+  await opener.click();
+  const dialog = page.getByRole('dialog', { name: /scanner/i });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('CORE 0%')).toBeVisible();
+  await dialog.getByRole('button', { name: 'A, scan' }).click();
+  await expect(dialog.getByText('Lead Developer & Systems Management').first()).toBeVisible();
+  await expect(dialog.getByRole('status')).toContainText('New specimen logged: #001');
+  await dialog.getByRole('tab', { name: 'CERTS' }).click();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('z');
+  await expect(dialog.getByText('African NDT Centre (Pty) Ltd').first()).toBeVisible();
+  const axe = await new AxeBuilder({ page }).include('dialog').analyze();
+  expect(axe.violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+  // The logbook survives a reload.
+  await page.reload();
+  await page.getByRole('button', { name: 'OPEN FIELD SCANNER' }).click();
+  await expect(
+    page.getByRole('dialog', { name: /scanner/i }).getByText(/CORE [1-9]\d*%/),
+  ).toBeVisible();
+});

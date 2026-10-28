@@ -1,6 +1,6 @@
 import type { CvManifest } from '@/lib/schema';
 import { PRESETS } from '@/features/three-body/presets';
-import { KarlButton, PresetControls } from './controls';
+import { KarlButton, PresetControls, ScannerButton } from './controls';
 
 export function Header({ person }: { person: CvManifest['person'] }) {
   return (
@@ -13,7 +13,7 @@ export function Header({ person }: { person: CvManifest['person'] }) {
           >
             LG
           </span>
-          <span className="min-w-0">
+          <span className="min-w-0 max-[24rem]:sr-only">
             <span className="block font-pixel text-xs text-cyan">{person.name.toUpperCase()}</span>
             <span className="hidden truncate font-terminal text-lg text-ink-muted lg:block">
               {person.title}
@@ -21,6 +21,7 @@ export function Header({ person }: { person: CvManifest['person'] }) {
           </span>
         </a>
         <nav aria-label="Ship controls" className="flex items-center gap-2">
+          <ScannerButton className="btn btn-gold md:hidden">SCAN</ScannerButton>
           <KarlButton className="btn btn-red">
             <span aria-hidden="true" className="size-2 animate-pulse bg-red" />
             K.A.R.L.
