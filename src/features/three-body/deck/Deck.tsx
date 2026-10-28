@@ -14,6 +14,7 @@ import { BASE_FOV, DEG, fov } from './camera';
 import { exposureValue } from './exposure';
 import { bodyCard, columnNm, spectrum } from './instruments';
 import type { Overlays } from './overlays';
+import { DOME_INDICATIONS } from './interior';
 import { DeckSession } from './session';
 import { formatDuration, sci, simToSeconds, TIME_UNIT } from './units';
 import { findVantage, VANTAGES, type VantageId } from './vantages';
@@ -122,6 +123,40 @@ export default function Deck({
   const [labView, setLabView] = useState(initialView === 'lab');
   const [events, setEvents] = useState<string[]>([]);
   const [travelMode, setTravelMode] = useState<'transit' | 'jump'>('transit');
+  const [inspecting, setInspecting] = useState(false);
+  const [gyro, setGyro] = useState<'off' | 'on' | 'denied'>('off');
+  // Client-only component, so the media query can run during the first render.
+  const [touch] = useState(
+    () => window.matchMedia('(pointer: coarse)').matches && 'DeviceOrientationEvent' in window,
+  );
+
+  // Optional gyroscope look-around on phones (brief §7), only after the visitor allows it.
+  useEffect(() => {
+    if (gyro !== 'on') return;
+    let last: { a: number; b: number } | null = null;
+    const onTilt = (e: DeviceOrientationEvent) => {
+      if (e.alpha === null || e.beta === null) return;
+      const now = { a: e.alpha, b: e.beta };
+      if (last) {
+        const da = ((now.a - last.a + 540) % 360) - 180;
+        session.current?.look((-da * Math.PI) / 180, ((now.b - last.b) * Math.PI) / 180);
+      }
+      last = now;
+    };
+    window.addEventListener('deviceorientation', onTilt);
+    return () => window.removeEventListener('deviceorientation', onTilt);
+  }, [gyro]);
+
+  const toggleGyro = async () => {
+    if (gyro === 'on') return setGyro('off');
+    const Orientation = DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<'granted' | 'denied'>;
+    };
+    if (typeof Orientation.requestPermission === 'function') {
+      const answer = await Orientation.requestPermission().catch(() => 'denied' as const);
+      setGyro(answer === 'granted' ? 'on' : 'denied');
+    } else setGyro('on');
+  };
   const pending = useRef<{ vantage?: string; focus?: string; zoom?: number }[]>([
     ...initialCommands,
   ]);
@@ -272,6 +307,9 @@ export default function Deck({
         for (let i = 0; i < px.length; i++) words![i] = lut[px[i]!]!;
       }
       ctx.putImageData(image!, 0, 0);
+      // Whole-pixel render plus a sub-pixel shift: smooth turning without shimmer.
+      const sp = labRef.current ? { x: 0, y: 0 } : s.subpixel;
+      el.style.transform = `translate(${(sp.x * scale).toFixed(2)}px, ${(sp.y * scale).toFixed(2)}px)`;
       placeLabels(s);
 
       const drained = s.drainEvents();
@@ -416,6 +454,11 @@ export default function Deck({
       '=': () => sess.zoomBy(1.25),
       '-': () => sess.zoomBy(1 / 1.25),
       f: () => select(sess.nearestToCentre()),
+      m: () => {
+        const on = sess.toggleInspection();
+        setInspecting(on);
+        setAnnounce(on ? 'Inspecting the dome frame: three weld indications.' : 'Inspection off.');
+      },
     };
     const act = actions[e.key] ?? actions[e.key.toLowerCase()];
     if (!act) return;
@@ -579,6 +622,13 @@ export default function Deck({
               {hud.shift.toFixed(3)} (+{((hud.shift - 1) * 100).toFixed(1)}%) · lensed sky
             </p>
           )}
+          {inspecting && (
+            <p className="text-gold">
+              <span className="text-ink-muted">INSPECTION (M)</span>{' '}
+              {DOME_INDICATIONS.map((d) => d.name).join(' · ')}: three linear indications, gold
+              under the magnetic particles.
+            </p>
+          )}
           <p role="status" className="sr-only">
             {announce}
           </p>
@@ -735,6 +785,16 @@ export default function Deck({
               >
                 LAB VIEW
               </button>
+              {touch && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  aria-pressed={gyro === 'on'}
+                  onClick={toggleGyro}
+                >
+                  {gyro === 'denied' ? 'GYRO BLOCKED' : 'GYRO LOOK'}
+                </button>
+              )}
             </div>
             <fieldset className="flex flex-wrap gap-x-4">
               <legend className="text-ink-muted">OVERLAYS</legend>
@@ -780,7 +840,7 @@ export default function Deck({
         </div>
         <p className="text-sm text-ink-muted">
           Drag or arrow keys to look · tap a body to focus · +/− or the wheel to zoom · F to centre
-          the nearest body · Esc to leave.
+          the nearest body · M to inspect the dome&apos;s welds · Esc to leave.
         </p>
       </section>
     </dialog>

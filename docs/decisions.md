@@ -326,3 +326,25 @@ asked, compact labelled scale.
 - **K.A.R.L. commands:** `/deck`, `/vantage <name>` (above, centre, l4, planet, hole, free),
   `/focus <body>` ("star 2", "planet"), `/zoom <1–50>`, `/lab`, and the existing `/exit`.
   Commands now carry their arguments. Vantage commands jump, as K.A.R.L. is in a hurry.
+
+## D15. Observation Deck, Phase 5: polish (28 Oct 2026)
+
+- **Pixel stability.** The view renders at whole-pixel yaw and pitch (one buffer pixel of
+  angle at the centre), and the remainder is applied to the canvas as a CSS sub-pixel
+  translation, as the brief's sources recommend. Turning slower than a pixel moves the picture
+  smoothly without a single pixel of the scene changing (unit-tested).
+- **Mobile.** Tap-to-focus works on touch; vantage buttons sit in a 3 × 2 grid at 390 px; the
+  console scrolls under the view. An optional GYRO LOOK button appears on touch devices with
+  orientation sensors and asks for permission where the browser requires it (iOS); blocked
+  permission shows as GYRO BLOCKED.
+- **Reduced motion:** exposure adapts instantly, focus snaps instead of slewing, travel is always
+  a jump with no wipe, and the frame's scanner bar and console lights hold still. The
+  simulation itself keeps running, since the visitor opened the deck to watch it.
+- **M on the deck** keeps the NDT easter egg: magnetic particles gather into three gold weld
+  indications on the dome frame (port strut, scanner housing, console rail), listed on the
+  console. They're ship lore, like K.A.R.L.'s core, not CV text.
+- **Texel splatting** (the brief's optional stretch goal) was not attempted. The baseline
+  pipeline with sub-pixel offsets is stable, and a cubemap-probe renderer is a larger change than
+  the gain justifies for now.
+- **Still for Luke:** the dome frame is placeholder art drawn in code from palette steps; the
+  brief's "hand-authored 2D pixel art" interior is his to draw in Aseprite.
