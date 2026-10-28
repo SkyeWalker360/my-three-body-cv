@@ -89,6 +89,14 @@ export default function Terminal({ initialCommand }: { initialCommand?: string }
   }, []);
 
   const close = useCallback(() => dialog.current?.close(), []);
+  const deckStatus = useRef<string[]>([]);
+  useEffect(
+    () =>
+      on('deck:status', ({ lines }) => {
+        deckStatus.current = lines;
+      }),
+    [],
+  );
 
   const respond = useCallback(
     async (intent: Intent) => {
@@ -142,6 +150,49 @@ export default function Terminal({ initialCommand }: { initialCommand?: string }
               close();
               emit('deck:open', { view: 'lab' });
               return;
+            case 'deck': {
+              // Narration only when asked (Luke, 28 Oct): read out the deck's latest status.
+              const status = deckStatus.current;
+              append([
+                line('OBSERVATION DECK', 'heading'),
+                ...(status.length
+                  ? status.map((s) => line(s))
+                  : [line('Opening the deck. Ask again with /deck once you have looked around.')]),
+              ]);
+              emit('deck:open', { view: 'deck' });
+              return;
+            }
+            case 'vantage':
+            case 'focus':
+            case 'zoom': {
+              const args = intent.type === 'command' ? (intent.args ?? '') : '';
+              if (!args) {
+                append([
+                  line(
+                    `Usage: /${name} ${name === 'zoom' ? '10' : name === 'focus' ? 'star 2' : 'hole'}`,
+                    'muted',
+                  ),
+                ]);
+                return;
+              }
+              const zoom = name === 'zoom' ? Number.parseFloat(args) : undefined;
+              if (name === 'zoom' && !(zoom! >= 1)) {
+                append([line('Zoom runs from 1× to 50×.', 'muted')]);
+                return;
+              }
+              append([line(`Deck: ${name} ${args}.`, 'muted')]);
+              close();
+              emit(
+                'deck:command',
+                name === 'vantage'
+                  ? { vantage: args }
+                  : name === 'focus'
+                    ? { focus: args }
+                    : { zoom },
+              );
+              emit('deck:open', { view: 'deck' });
+              return;
+            }
             case 'karr':
               if (current === 'rpg') {
                 append([line('Finish or /exit the campaign first.', 'muted')]);

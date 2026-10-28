@@ -16,7 +16,7 @@ import { bodyCard, columnNm, spectrum } from './instruments';
 import type { Overlays } from './overlays';
 import { DeckSession } from './session';
 import { formatDuration, sci, simToSeconds, TIME_UNIT } from './units';
-import { hole, VANTAGES, type VantageId } from './vantages';
+import { findVantage, VANTAGES, type VantageId } from './vantages';
 
 const TARGET_WIDTH = 320;
 const ENGINE_SPEED = 0.75; // sim units per real second (sim.SimSpeed)
@@ -38,12 +38,20 @@ type Hud = {
   elapsed: number;
   bodies: DeckBody[];
   distances: Record<string, number>;
-  holeAvailable: boolean;
+  offered: Record<VantageId, boolean>;
+  transit: string | null;
+  transitTo: string | null;
   eclipses: { name: string; covered: number }[];
   shift: number;
   light: number;
   telemetry: ReturnType<DeckSession['telemetry']>;
   tracking: string | null;
+};
+
+const UNAVAILABLE: Partial<Record<VantageId, string>> = {
+  lagrange: 'Offered for the Lagrange triangle and the close pair',
+  planet: 'Waiting for a planet to form',
+  blackhole: 'Age the blue-white giant until it collapses into a black hole',
 };
 
 const OVERLAY_LABELS: [keyof Overlays, string][] = [
@@ -65,13 +73,32 @@ function bandToken(nm: number): string {
   return 'red-1';
 }
 
+/** Applies one of K.A.R.L.'s deck commands; vantages arrive by jump, as K.A.R.L. hurries. */
+function applyCommand(s: DeckSession, cmd: { vantage?: string; focus?: string; zoom?: number }) {
+  if (cmd.vantage) {
+    const id = findVantage(cmd.vantage);
+    if (id) s.jump(id);
+  }
+  if (cmd.focus) {
+    const b = s.findBody(cmd.focus);
+    if (b) s.focus(b);
+  }
+  if (cmd.zoom) s.setZoom(cmd.zoom);
+}
+
 /**
  * The Observation Deck: a viewing platform inside the three-body system (Observation Deck
  * brief v3). A native modal dialog with the view on a pixel canvas (aria-hidden) and every
  * readout and instrument in the DOM. It runs its own engine instance, separate from the
  * background lab.
  */
-export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) {
+export default function Deck({
+  initialView,
+  initialCommands = [],
+}: {
+  initialView?: 'deck' | 'lab';
+  initialCommands?: { vantage?: string; focus?: string; zoom?: number }[];
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -94,6 +121,10 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
   const [ghost, setGhost] = useState(false);
   const [labView, setLabView] = useState(initialView === 'lab');
   const [events, setEvents] = useState<string[]>([]);
+  const [travelMode, setTravelMode] = useState<'transit' | 'jump'>('transit');
+  const pending = useRef<{ vantage?: string; focus?: string; zoom?: number }[]>([
+    ...initialCommands,
+  ]);
   const preset = useRef(0);
   const [presetIndex, setPresetIndex] = useState(0);
   const warpRef = useRef(warp);
@@ -108,6 +139,14 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
   useEffect(() => {
     if (session.current) session.current.overlays = overlays;
   }, [overlays]);
+
+  useEffect(
+    () =>
+      on('deck:command', (cmd) => {
+        pending.current.push(cmd);
+      }),
+    [],
+  );
 
   useEffect(
     () =>
@@ -242,8 +281,11 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
       const fresh = drained.filter((e) => e.kind !== 'critical');
       if (fresh.length) setEvents((list) => [...fresh.map((e) => e.message), ...list].slice(0, 6));
 
+      for (const cmd of pending.current.splice(0)) applyCommand(s, cmd);
       if (now - lastHud > 250) {
         lastHud = now;
+        if (Math.floor(now / 2000) !== Math.floor((now - 250) / 2000))
+          emit('deck:status', { lines: s.narrate() });
         const c = s.camera;
         setHud({
           vantage: VANTAGES[s.vantage].name,
@@ -258,7 +300,11 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
               Math.hypot(...b.position.map((v, k) => v - c.position[k]!)),
             ]),
           ),
-          holeAvailable: hole(s.bodies) !== undefined,
+          offered: Object.fromEntries(
+            (Object.keys(VANTAGES) as VantageId[]).map((id) => [id, s.offers(id)]),
+          ) as Record<VantageId, boolean>,
+          transit: s.transitElapsed(),
+          transitTo: s.transit ? VANTAGES[s.transit.to].name : null,
           eclipses: s.eclipses,
           shift: s.lastFrame?.shift ?? 1,
           light: s.light.level,
@@ -437,7 +483,7 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
         <div
           role="group"
           aria-label="Vantage"
-          className="grid w-full grid-cols-4 gap-1 sm:flex sm:w-auto sm:gap-2"
+          className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2"
         >
           {(Object.keys(VANTAGES) as VantageId[]).map((id) => (
             <button
@@ -445,15 +491,12 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
               type="button"
               className="btn btn-cyan justify-center px-1 sm:px-4"
               aria-pressed={!labView && hud?.vantage === VANTAGES[id].name}
-              disabled={id === 'blackhole' && !hud?.holeAvailable}
-              title={
-                id === 'blackhole' && !hud?.holeAvailable
-                  ? 'Age the blue-white giant until it collapses into a black hole'
-                  : undefined
-              }
+              disabled={!hud?.offered[id]}
+              title={hud?.offered[id] ? undefined : UNAVAILABLE[id]}
               onClick={() => {
                 setLabView(false);
-                s()?.setVantage(id);
+                if (travelMode === 'jump') s()?.jump(id);
+                else s()?.travel(id);
               }}
             >
               {VANTAGES[id].short}
@@ -511,6 +554,12 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
             <span className="text-ink-muted">ELAPSED</span>{' '}
             {hud ? formatDuration(simToSeconds(hud.elapsed)) : '—'}
           </p>
+          {hud?.transit && (
+            <p className="text-cyan">
+              <span className="text-ink-muted">TRANSIT</span> to {hud.transitTo}: {hud.transit}{' '}
+              elapsed (clock at {Math.max(warp, 4)}×)
+            </p>
+          )}
           <p className="text-gold">
             COMPACT SCALE: bodies are drawn at the lab&apos;s size, far larger than life. Distances
             are true.
@@ -610,6 +659,19 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
                 </button>
               ))}
             </div>
+            <div role="group" aria-label="Travel" className="flex flex-wrap gap-2">
+              {(['transit', 'jump'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="btn btn-ghost"
+                  aria-pressed={travelMode === m}
+                  onClick={() => setTravelMode(m)}
+                >
+                  {m.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <label className="flex items-center gap-2">
               <span className="text-ink-muted">SYSTEM</span>
               <select
@@ -643,6 +705,16 @@ export default function Deck({ initialView }: { initialView?: 'deck' | 'lab' }) 
               </button>
               <button type="button" className="btn btn-violet" onClick={() => s()?.kick()}>
                 KICK
+              </button>
+              <button
+                type="button"
+                className="btn btn-red"
+                onClick={() => {
+                  const lines = s()?.narrate() ?? [];
+                  setEvents((list) => [...lines.map((l) => `K.A.R.L.: ${l}`), ...list].slice(0, 8));
+                }}
+              >
+                ASK K.A.R.L.
               </button>
               <button
                 type="button"

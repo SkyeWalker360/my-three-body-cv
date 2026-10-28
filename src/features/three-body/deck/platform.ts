@@ -29,18 +29,52 @@ export function gravity(at: Vec3, masses: readonly Mass[]): Vec3 {
   return a;
 }
 
+/** A body to keep clear of: the platform never enters a star, its envelope or the hole's zone. */
+export type Obstacle = { position: Vec3; radius: number };
+/** Keep-out distance: this many times a body's (drawn) radius, plus a margin. */
+export const KEEP_OUT = 3;
+export const KEEP_OUT_MARGIN = 0.05;
+
+/** Repulsion that grows as the platform pushes into an obstacle's keep-out zone. */
+export function avoidance(at: Vec3, obstacles: readonly Obstacle[], maxThrust: number): Vec3 {
+  let a: Vec3 = [0, 0, 0];
+  for (const o of obstacles) {
+    const d = sub(at, o.position);
+    const r = length(d);
+    const safe = o.radius * KEEP_OUT + KEEP_OUT_MARGIN;
+    if (r >= safe || r === 0) continue;
+    a = add(a, scale(d, (((safe - r) / safe) * (maxThrust * 2)) / r));
+  }
+  return a;
+}
+
 /**
- * Thrust that cancels gravity and steers toward `target` (a critically damped spring),
- * capped at MAX_THRUST.
+ * Thrust that cancels gravity and steers toward `target` (a critically damped spring), plus
+ * obstacle avoidance, capped at `maxThrust`.
  */
-export function stationKeeping(p: Platform, target: Vec3, g: Vec3, targetVelocity: Vec3): Vec3 {
+export function stationKeeping(
+  p: Platform,
+  target: Vec3,
+  g: Vec3,
+  targetVelocity: Vec3,
+  maxThrust = MAX_THRUST,
+  obstacles: readonly Obstacle[] = [],
+): Vec3 {
   const steer = add(
     scale(sub(target, p.position), STIFFNESS),
     scale(sub(targetVelocity, p.velocity), DAMPING),
   );
-  const want = sub(steer, g);
+  const avoid = avoidance(p.position, obstacles, MAX_THRUST);
+  // A gentle trip drive stays gentle in open space, so the path arcs under gravity, but
+  // strengthens with the local pull so it can't be captured; inside a keep-out zone it goes
+  // to full power.
+  const cap =
+    length(avoid) > 0
+      ? Math.max(maxThrust, MAX_THRUST)
+      : Math.min(Math.max(maxThrust, MAX_THRUST), maxThrust + 1.5 * length(g));
+  const want = add(sub(steer, g), avoid);
   const n = length(want);
-  return n > MAX_THRUST ? scale(want, MAX_THRUST / n) : want;
+  return n > cap ? scale(want, cap / n) : want;
 }
 
 /**
@@ -53,6 +87,8 @@ export function stepPlatform(
   dt: number,
   target: Vec3 | null,
   targetVelocity: Vec3 = [0, 0, 0],
+  maxThrust = MAX_THRUST,
+  obstacles: readonly Obstacle[] = [],
 ): Platform {
   const steps = Math.max(1, Math.ceil(Math.abs(dt) / MAX_SUBSTEP));
   const h = dt / steps;
@@ -60,7 +96,17 @@ export function stepPlatform(
   const accel = (at: Vec3, v: Vec3) => {
     const g = gravity(at, masses);
     return target
-      ? add(g, stationKeeping({ position: at, velocity: v }, target, g, targetVelocity))
+      ? add(
+          g,
+          stationKeeping(
+            { position: at, velocity: v },
+            target,
+            g,
+            targetVelocity,
+            maxThrust,
+            obstacles,
+          ),
+        )
       : g;
   };
   for (let i = 0; i < steps; i++) {

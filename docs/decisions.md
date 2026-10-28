@@ -287,3 +287,42 @@ asked, compact labelled scale.
 - **Glass dust** is now the class's darkest tone and only shows in strong light; at the brighter
   tone it read as stars. The session also re-creates its views onto engine memory if they ever go
   stale, which a dev-server reload exposed.
+
+## D14. Observation Deck, Phase 4: vantages, travel, events, K.A.R.L. (28 Oct 2026)
+
+- **Vantages per preset.** Above (default) and barycentre everywhere; **L4** of the two heaviest
+  stars for the Lagrange triangle and the close pair, 0.5 AU above the point, with a view that
+  co-rotates (always facing the pair's barycentre) so the bodies hang nearly still; **planet
+  orbit**, riding 3.5 drawn radii beside the planet and looking past it toward its sun (phases,
+  sunrises, eclipses); **black hole** once one exists; and free look. Unavailable vantages are
+  disabled with a reason in their tooltip.
+- **Travel.** TRANSIT flies the platform under real gravity with a gentle drive (6 units) that
+  strengthens with the local pull (up to the 40-unit station-keeping cap) so it arcs in open space
+  but can't be captured near the stars, and the clock runs at least 4× during the trip. The
+  console shows the real time elapsed ("TRANSIT to Lagrange point L4: 47 days elapsed").
+  Arrival is judged by distance and by speed relative to the station, since L4 moves. JUMP
+  plays a 0.4 s scanline wipe and moves at its midpoint. Riding vantages and free look always
+  jump; reduced motion always jumps, without the wipe.
+- **Safety.** Every star and the planet has a keep-out zone (3× its drawn radius + 0.05 AU);
+  inside it the drive goes to full power to push out. A test flies a transit through the
+  figure-8 and checks the platform never enters a star. (The first version, with a fixed
+  gentle cap, got captured and fell into one: the test caught it.)
+- **Events seen from the deck.** The engine gained an effects buffer (shells, shocks and the
+  flash, with radii in AU as the lab draws them; `effectsPtr()`, tested in Go, mirrored in
+  `engine-layout.ts`). Giants shed gas shells drawn as dithered rings in the orbital plane, and a
+  shell that reaches the platform washes over it as a faint haze. A supernova's flash is a
+  billion-Sun point source, so auto-exposure clamps exactly as the brief describes; its shock
+  front expands as a ring and nudges the platform outward once as it passes (station-keeping
+  brings it back). Black-hole formation switches lensing on (Phase 2); climate eras and city
+  lights were already drawn on the planet. Written as a method rather than a closure so TinyGo
+  can't allocate per frame; a test checks engine memory doesn't grow.
+- **Nebula rebirth (Epoch N+1) is not in the engine**, so the deck can't show it. If the engine
+  gains it, new stars arrive as ordinary bodies and the deck draws them with no further work.
+- **Narration only when asked** (Luke's answer to §9). The deck's ASK K.A.R.L. button writes
+  K.A.R.L.'s lines into the event log: stars leaving the main sequence, the next eclipse
+  ("Eclipse in about 40 seconds: Planet will cross Star 2", predicted from how fast the discs are
+  closing), eclipses in progress, transits and the last event. K.A.R.L.'s `/deck` reads the same
+  lines out in the terminal (the deck refreshes them every 2 s while open) and opens the deck.
+- **K.A.R.L. commands:** `/deck`, `/vantage <name>` (above, centre, l4, planet, hole, free),
+  `/focus <body>` ("star 2", "planet"), `/zoom <1–50>`, `/lab`, and the existing `/exit`.
+  Commands now carry their arguments. Vantage commands jump, as K.A.R.L. is in a hurry.

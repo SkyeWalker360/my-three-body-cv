@@ -1,23 +1,38 @@
 import type { LabEventKind } from '@/lib/events';
 import { describeEvent, type EngineExports } from '../engine';
-import { BODY, EVENT, EVENT_SLOTS, EVENT_STRIDE, STAR_KINDS, STATE } from '../engine-layout';
+import {
+  BODY,
+  EFFECT,
+  ENGINE_PALETTE,
+  EVENT,
+  EVENT_SLOTS,
+  EVENT_STRIDE,
+  STAR_KINDS,
+  STATE,
+} from '../engine-layout';
 import { type DeckBody, readBodies } from './bodies';
 import {
+  add,
   aimAt,
+  angularRadius,
   basis,
   type Camera,
   clampPitch,
   clampZoom,
+  dot,
+  length,
   normalize,
+  scale,
   sub,
   type Vec3,
   wrapYaw,
 } from './camera';
-import { adapt, flux, targetExposure } from './exposure';
 import { visibleFraction } from './eclipse';
+import { drawEffects, type Effect, flashRadiance, readEffects } from './effects';
+import { adapt, flux, targetExposure } from './exposure';
 import { drawGlass, drawInterior, interiorLevel } from './interior';
 import { drawOverlays, NO_OVERLAYS, type Overlays, Trails } from './overlays';
-import { type Platform, stepPlatform } from './platform';
+import { type Obstacle, type Platform, stepPlatform } from './platform';
 import {
   type Frame,
   type Lens,
@@ -28,12 +43,26 @@ import {
   type SkyMap,
   type SkyStar,
 } from './render';
-import { schwarzschildAu } from './units';
+import { formatDuration, schwarzschildAu, simToSeconds } from './units';
 import { DEFAULT_VANTAGE, hole, VANTAGES, type VantageId } from './vantages';
 
 /** Engine frame size the deck asks for, so the engine's pixel radii stay at reference scale. */
 const ENGINE_W = 480;
 const ENGINE_H = 270;
+/** Transits use a gentler drive than station-keeping, so the trip arcs under gravity. */
+export const TRANSIT_THRUST = 6;
+/** Transits run the clock at least this fast (brief: "trips are shown at time-warp"). */
+export const TRANSIT_WARP = 4;
+/** Arrival: within this distance (AU) of the station and slower than this speed. */
+const ARRIVE_DISTANCE = 0.05;
+const ARRIVE_SPEED = 0.6;
+/** Jump wipe length in seconds; the platform moves at its midpoint. */
+export const WIPE_SECONDS = 0.4;
+/** A supernova shock front passing the platform kicks it outward by this much × strength. */
+export const SHOCK_KICK = 0.6;
+const WIPE = ENGINE_PALETTE.indexOf('void-0');
+
+export type DeckEvent = { kind: LabEventKind | 'critical'; message: string; critical?: boolean };
 
 /**
  * One observation session: its own engine instance (so the deck's time controls never touch
@@ -43,9 +72,11 @@ export class DeckSession {
   readonly sky: SkyStar[] = makeSky();
   pixels: Uint8Array;
   bodies: DeckBody[] = [];
+  effects: Effect[] = [];
   platform: Platform;
   camera: Camera;
   vantage: VantageId = DEFAULT_VANTAGE;
+  preset: number;
   exposure = 0;
   /** Simulation time units elapsed since the session started. */
   elapsed = 0;
@@ -53,7 +84,8 @@ export class DeckSession {
   light = { level: 0, colourClass: 3 };
   /** Stars partly hidden from the deck right now: name and fraction covered. */
   eclipses: { name: string; covered: number }[] = [];
-  private skyMap: SkyMap | null = null;
+  /** The soonest predicted eclipse, from how fast discs are closing on each other. */
+  nextEclipse: { star: string; by: string; seconds: number } | null = null;
   overlays: Overlays = { ...NO_OVERLAYS };
   readonly trails = new Trails();
   /** The body the view follows, by id, until the visitor looks away. */
@@ -61,14 +93,24 @@ export class DeckSession {
   /** Show the engine's own orthographic pixel lab instead of the deck view (K.A.R.L.'s /lab). */
   labView = false;
   ghostOn = false;
+  /** A guided trip in progress: where to, and the sim time it started. */
+  transit: { to: VantageId; started: number } | null = null;
+  /** The last few event messages, for K.A.R.L.'s narration. */
+  readonly recent: string[] = [];
+  private skyMap: SkyMap | null = null;
+  private wipe: { t: number; to: VantageId; moved: boolean } | null = null;
   private lastEvent = 0;
   private events: Int32Array;
+  private effectBuffer: Float64Array;
   /** Free look holds wherever it was chosen. */
   private hold: Vec3 | null = null;
   private time = 0;
   private parallax = { x: 0, y: 0 };
   private state: Float64Array;
   private bodyBuffer: Float64Array;
+  private lastStation: Vec3 | null = null;
+  private nudged = new Set<string>();
+  private gaps = new Map<string, { gap: number; t: number }>();
 
   constructor(
     private engine: EngineExports,
@@ -78,6 +120,7 @@ export class DeckSession {
     seed: number,
     private instant: boolean,
   ) {
+    this.preset = preset;
     engine.init(seed, preset);
     engine.resize(ENGINE_W, ENGINE_H);
     this.state = new Float64Array(engine.memory.buffer, engine.statePtr(), STATE.length);
@@ -90,6 +133,11 @@ export class DeckSession {
       engine.memory.buffer,
       engine.eventsPtr(),
       1 + EVENT_SLOTS * EVENT_STRIDE,
+    );
+    this.effectBuffer = new Float64Array(
+      engine.memory.buffer,
+      engine.effectsPtr(),
+      1 + EFFECT.rows * EFFECT.width,
     );
     engine.advance(0);
     this.bodies = readBodies(this.state, this.bodyBuffer);
@@ -124,6 +172,7 @@ export class DeckSession {
   }
 
   setPreset(preset: number, seed: number) {
+    this.preset = preset;
     this.engine.init(seed, preset);
     this.engine.resize(ENGINE_W, ENGINE_H);
     this.engine.ghost(this.ghostOn ? 1 : 0);
@@ -132,17 +181,28 @@ export class DeckSession {
     this.lastEvent = this.events[0]!;
     this.trails.clear();
     this.tracking = null;
+    this.transit = null;
+    this.nudged.clear();
     this.elapsed = 0;
-    this.setVantage(this.vantage, true);
+    const v = VANTAGES[this.vantage];
+    this.setVantage(v.available && !v.available(this.bodies, preset) ? 'above' : this.vantage);
   }
 
-  /** Moves to a vantage. Phase 1 jumps; guided transits arrive in Phase 4. */
-  setVantage(id: VantageId, jump = true) {
+  /** Whether a vantage is offered right now (some need a planet, a hole or a preset). */
+  offers(id: VantageId): boolean {
+    const v = VANTAGES[id];
+    return !v.available || v.available(this.bodies, this.preset);
+  }
+
+  /** Moves to a vantage at once (no wipe): used on start, preset changes and arrivals. */
+  setVantage(id: VantageId) {
     const v = VANTAGES[id];
     this.vantage = id;
+    this.transit = null;
     this.hold = id === 'free' ? this.platform.position : null;
     const station = v.station(this.bodies) ?? this.platform.position;
-    if (jump || v.rides) this.platform = { position: station, velocity: [0, 0, 0] };
+    this.platform = { position: station, velocity: [0, 0, 0] };
+    this.lastStation = null;
     this.camera = {
       ...this.camera,
       position: this.platform.position,
@@ -151,6 +211,43 @@ export class DeckSession {
       yaw: 0,
       pitch: 0,
     };
+    this.applyFrame();
+  }
+
+  /** "Jump": a scanline wipe, then straight there. Reduced motion skips the wipe. */
+  jump(id: VantageId) {
+    if (!this.offers(id)) return;
+    if (this.instant) this.setVantage(id);
+    else this.wipe = { t: 0, to: id, moved: false };
+  }
+
+  /**
+   * A guided trip under real gravity and a capped drive, routed around bodies. Riding
+   * vantages and free look have nothing to fly to, so they jump; reduced motion always jumps.
+   */
+  travel(id: VantageId) {
+    const v = VANTAGES[id];
+    if (!this.offers(id)) return;
+    if (this.instant || v.rides || id === 'free') return this.jump(id);
+    this.transit = { to: id, started: this.elapsed };
+    this.hold = null;
+    this.tracking = null;
+    const station = v.station(this.bodies);
+    if (station) {
+      // Face the destination for the trip.
+      this.camera = {
+        ...this.camera,
+        baseForward: sub(station, this.platform.position),
+        baseUp: [0, 0, 1],
+        yaw: 0,
+        pitch: 0,
+      };
+    }
+  }
+
+  /** Real time a transit has taken so far, formatted. */
+  transitElapsed(): string | null {
+    return this.transit ? formatDuration(simToSeconds(this.elapsed - this.transit.started)) : null;
   }
 
   viewDirection(): Vec3 {
@@ -170,10 +267,26 @@ export class DeckSession {
     this.camera.zoom = clampZoom(this.camera.zoom * factor);
   }
 
+  setZoom(zoom: number) {
+    this.camera.zoom = clampZoom(zoom);
+  }
+
   /** Slews the view onto a body and keeps it centred until the visitor looks away. */
   focus(body: DeckBody) {
     this.tracking = body.id;
     if (this.instant) this.aim(body, 1);
+  }
+
+  /** Finds a body by a typed name (K.A.R.L.'s /focus): "star 2", "2", "planet". */
+  findBody(query: string): DeckBody | null {
+    const q = query.trim().toLowerCase();
+    if (!q) return null;
+    return (
+      this.bodies.find((b) => b.kind !== 'fragment' && b.name.toLowerCase() === q) ??
+      this.bodies.find((b) => b.kind === 'star' && String(b.star + 1) === q.replace(/\D/g, '')) ??
+      this.bodies.find((b) => b.kind !== 'fragment' && b.name.toLowerCase().includes(q)) ??
+      null
+    );
   }
 
   private aim(body: DeckBody, k: number) {
@@ -219,11 +332,12 @@ export class DeckSession {
   }
 
   /** New engine events since the last call, described as in the lab. */
-  drainEvents(): { kind: LabEventKind | 'critical'; message: string; critical?: boolean }[] {
+  drainEvents(): DeckEvent[] {
+    this.ensureViews();
     const ev = this.events;
     const count = ev[0]!;
     if (count < this.lastEvent) this.lastEvent = 0;
-    const out: { kind: LabEventKind | 'critical'; message: string; critical?: boolean }[] = [];
+    const out: DeckEvent[] = [];
     if (count === this.lastEvent) return out;
     const kinds = [0, 1, 2].map(
       (i) => STAR_KINDS[this.state[STATE.stars + i * STATE.starWidth]!] ?? 'Star',
@@ -236,10 +350,36 @@ export class DeckSession {
         continue;
       }
       const d = describeEvent(kind, ev[o + 2]!, ev[o + 3]!, kinds);
-      if (d) out.push(d);
+      if (d) {
+        out.push(d);
+        this.recent.unshift(d.message);
+        this.recent.length = Math.min(this.recent.length, 4);
+      }
     }
     this.lastEvent = count;
     return out;
+  }
+
+  /**
+   * K.A.R.L.'s narration, on request (Luke, 28 Oct: only when asked): what's happening now,
+   * what's coming (the next eclipse) and what just happened.
+   */
+  narrate(): string[] {
+    const lines: string[] = [];
+    for (const b of this.bodies) {
+      if (b.kind === 'star' && b.phase === 'Giant')
+        lines.push(`${b.name} is leaving the main sequence: it's swelling into a giant.`);
+    }
+    if (this.nextEclipse && this.nextEclipse.seconds < 120)
+      lines.push(
+        `Eclipse in about ${Math.max(1, Math.round(this.nextEclipse.seconds))} seconds: ${this.nextEclipse.by} will cross ${this.nextEclipse.star}.`,
+      );
+    for (const e of this.eclipses)
+      lines.push(`${e.name} is ${Math.round(e.covered * 100)}% eclipsed right now.`);
+    if (this.transit) lines.push(`In transit to ${VANTAGES[this.transit.to].name}.`);
+    if (this.recent.length) lines.push(`Last event: ${this.recent[0]}`);
+    if (!lines.length) lines.push('All quiet out there. Age a star if you want fireworks.');
+    return lines;
   }
 
   /** The engine's own orthographic frame (480 × 270 palette indices) for the lab view. */
@@ -261,8 +401,7 @@ export class DeckSession {
     let bestCos = -2;
     for (const b of this.bodies) {
       if (b.kind === 'fragment') continue;
-      const d = normalize(sub(b.position, this.camera.position));
-      const c = d[0] * f[0] + d[1] * f[1] + d[2] * f[2];
+      const c = dot(normalize(sub(b.position, this.camera.position)), f);
       if (c > bestCos) {
         bestCos = c;
         best = b;
@@ -273,32 +412,81 @@ export class DeckSession {
 
   /** Views onto engine memory go stale (zero length) if WebAssembly memory ever grows. */
   private ensureViews() {
-    if (this.state.length && this.bodyBuffer.length && this.events.length) return;
+    if (
+      this.state.length &&
+      this.bodyBuffer.length &&
+      this.events.length &&
+      this.effectBuffer.length
+    )
+      return;
     const e = this.engine;
     this.state = new Float64Array(e.memory.buffer, e.statePtr(), STATE.length);
     this.bodyBuffer = new Float64Array(e.memory.buffer, e.bodiesPtr(), BODY.rows * BODY.width);
     this.events = new Int32Array(e.memory.buffer, e.eventsPtr(), 1 + EVENT_SLOTS * EVENT_STRIDE);
+    this.effectBuffer = new Float64Array(
+      e.memory.buffer,
+      e.effectsPtr(),
+      1 + EFFECT.rows * EFFECT.width,
+    );
+  }
+
+  /** Vantages that follow the system re-aim their resting frame every frame. */
+  private applyFrame() {
+    const v = VANTAGES[this.vantage];
+    const f = !this.transit && v.frame?.(this.bodies, this.platform.position);
+    if (f) {
+      this.camera.baseForward = f.forward;
+      this.camera.baseUp = f.up;
+    }
+  }
+
+  private obstacles(): Obstacle[] {
+    return this.bodies
+      .filter((b) => b.kind !== 'fragment')
+      .map((b) => ({ position: b.position, radius: b.radius }));
   }
 
   /** Advances `dt` real seconds (× warp) and draws the view. */
   frame(dt: number, warp: number): Frame {
     this.ensureViews();
     this.time += dt;
+    const rate = this.transit ? Math.max(warp, TRANSIT_WARP) : warp;
     const before = this.simTime;
-    if (warp > 0) this.engine.advance(dt * 1000 * warp);
+    if (rate > 0) this.engine.advance(dt * 1000 * rate);
     const after = this.simTime;
     // The engine resets its clock when it reloads a preset after an escape.
     const dSim = after >= before ? after - before : after;
     this.elapsed += dSim;
     this.bodies = readBodies(this.state, this.bodyBuffer);
+    this.effects = readEffects(this.effectBuffer);
     this.trails.record(this.bodies, after);
 
-    const vantage = VANTAGES[this.vantage];
-    if (vantage.available && !vantage.available(this.bodies)) this.setVantage('above');
-    const station = this.hold ?? VANTAGES[this.vantage].station(this.bodies);
-    if (VANTAGES[this.vantage].rides && station) {
-      this.platform = { position: station, velocity: hole(this.bodies)?.velocity ?? [0, 0, 0] };
+    // A jump's wipe moves the platform at its midpoint.
+    if (this.wipe) {
+      this.wipe.t += dt;
+      if (!this.wipe.moved && this.wipe.t >= WIPE_SECONDS / 2) {
+        this.wipe.moved = true;
+        this.setVantage(this.wipe.to);
+      }
+    }
+
+    if (!this.offers(this.vantage)) this.setVantage('above');
+    const target = this.transit ? this.transit.to : this.vantage;
+    const v = VANTAGES[target];
+    const station = this.transit ? v.station(this.bodies) : (this.hold ?? v.station(this.bodies));
+    let stationVelocity: Vec3 = [0, 0, 0];
+    if (!this.transit && v.rides && station) {
+      this.platform = {
+        position: station,
+        velocity: (v.id === 'blackhole'
+          ? hole(this.bodies)
+          : this.bodies.find((b) => b.kind === 'planet')
+        )?.velocity ?? [0, 0, 0],
+      };
     } else if (dSim > 0) {
+      // Stations that move (L4, the barycentre) are tracked with their velocity too.
+      stationVelocity =
+        station && this.lastStation ? scale(sub(station, this.lastStation), 1 / dSim) : [0, 0, 0];
       this.platform = stepPlatform(
         this.platform,
         this.bodies
@@ -306,9 +494,26 @@ export class DeckSession {
           .map((b) => ({ position: b.position, mass: b.mass })),
         dSim,
         station,
+        stationVelocity,
+        this.transit ? TRANSIT_THRUST : undefined,
+        this.obstacles(),
       );
     }
+    this.lastStation = station;
+    this.shockNudge();
+    if (this.transit && station) {
+      const close = length(sub(this.platform.position, station)) < ARRIVE_DISTANCE;
+      // Arrival is judged against the station's own motion (L4 swings round with its pair).
+      if (close && length(sub(this.platform.velocity, stationVelocity)) < ARRIVE_SPEED) {
+        const to = this.transit.to;
+        this.transit = null;
+        const keep = this.platform;
+        this.setVantage(to);
+        this.platform = keep;
+      }
+    }
     this.camera.position = this.platform.position;
+    this.applyFrame();
     const tracked = this.tracking ? this.bodies.find((b) => b.id === this.tracking) : undefined;
     if (this.tracking && !tracked) this.tracking = null;
     if (tracked) this.aim(tracked, this.instant ? 1 : 1 - Math.exp(-dt * 5));
@@ -322,16 +527,34 @@ export class DeckSession {
       this.time,
       this.lens(),
     );
+    drawEffects(this.pixels, this.camera, this.effects, this.bodies);
     drawOverlays(this.pixels, this.camera, this.bodies, this.trails, this.overlays);
     const omega = pixelSolidAngle(basis(this.camera));
+    // A supernova flash in view clamps the exposure like glare.
+    let peak = frame.peak;
+    for (const e of this.effects) peak = Math.max(peak, flashRadiance(e, this.camera, omega));
     this.exposure = adapt(
       this.exposure,
-      targetExposure(frame.peak, omega),
+      targetExposure(peak, omega),
       dt,
       this.instant || this.exposure === 0,
     );
 
-    // Starlight reaching the deck lights the frame, less whatever is eclipsed.
+    this.lightDeck();
+    this.predictEclipse();
+    const k = Math.exp(-dt * 6);
+    this.parallax.x *= k;
+    this.parallax.y *= k;
+    const { width, height } = this.camera;
+    drawGlass(this.pixels, width, height, this.light, this.parallax);
+    drawInterior(this.pixels, width, height, this.light, this.parallax, this.time, this.critical);
+    this.drawWipe();
+    this.lastFrame = frame;
+    return frame;
+  }
+
+  /** Starlight reaching the deck lights the frame, less whatever is eclipsed. */
+  private lightDeck() {
     let total = 0;
     let strongest = 0;
     this.eclipses = [];
@@ -340,8 +563,7 @@ export class DeckSession {
       const seen = visibleFraction(this.camera.position, b, this.bodies);
       if (seen < 0.99) this.eclipses.push({ name: b.name, covered: 1 - seen });
       const f =
-        flux(b.luminosity, Math.max(1e-3, Math.hypot(...sub(b.position, this.camera.position)))) *
-        seen;
+        flux(b.luminosity, Math.max(1e-3, length(sub(b.position, this.camera.position)))) * seen;
       total += f;
       if (f > strongest) {
         strongest = f;
@@ -349,14 +571,72 @@ export class DeckSession {
       }
     }
     this.light.level = interiorLevel(total);
-    const k = Math.exp(-dt * 6);
-    this.parallax.x *= k;
-    this.parallax.y *= k;
-    const { width, height } = this.camera;
-    drawGlass(this.pixels, width, height, this.light, this.parallax);
-    drawInterior(this.pixels, width, height, this.light, this.parallax, this.time, this.critical);
-    this.lastFrame = frame;
-    return frame;
+  }
+
+  /**
+   * Predicts the next eclipse from how fast each star's disc and each nearer body's disc are
+   * closing in angle, in real seconds at the current clock rate.
+   */
+  private predictEclipse() {
+    const at = this.camera.position;
+    let best: DeckSession['nextEclipse'] = null;
+    for (const s of this.bodies) {
+      if (s.luminosity <= 0) continue;
+      const ds = length(sub(s.position, at));
+      for (const o of this.bodies) {
+        if (o === s || o.kind === 'fragment') continue;
+        const d = length(sub(o.position, at));
+        if (d >= ds) continue;
+        const gamma = Math.acos(
+          Math.max(
+            -1,
+            Math.min(1, dot(normalize(sub(s.position, at)), normalize(sub(o.position, at)))),
+          ),
+        );
+        const gap = gamma - angularRadius(s.radius, ds) - angularRadius(o.radius, d);
+        const key = `${o.id}>${s.id}`;
+        const prev = this.gaps.get(key);
+        this.gaps.set(key, { gap, t: this.time });
+        if (!prev || gap <= 0 || this.time - prev.t <= 0) continue;
+        const closing = (prev.gap - gap) / (this.time - prev.t);
+        if (closing <= 0) continue;
+        const seconds = gap / closing;
+        if (!best || seconds < best.seconds) best = { star: s.name, by: o.name, seconds };
+      }
+    }
+    this.nextEclipse = best;
+  }
+
+  /** A supernova shock front sweeping past the platform nudges it outward, once per shock. */
+  private shockNudge() {
+    for (const e of this.effects) {
+      if (e.kind !== 'shock') continue;
+      const key = `${e.position[0].toFixed(4)},${e.position[1].toFixed(4)}`;
+      if (this.nudged.has(key)) continue;
+      const away = sub(this.platform.position, e.position);
+      if (length(away) > e.radius) continue;
+      this.nudged.add(key);
+      if (VANTAGES[this.vantage].rides) continue;
+      this.platform = {
+        position: this.platform.position,
+        velocity: add(this.platform.velocity, scale(normalize(away), SHOCK_KICK * e.strength)),
+      };
+    }
+  }
+
+  /** The jump's scanline wipe: dark lines sweep down, then back up after the move. */
+  private drawWipe() {
+    if (!this.wipe) return;
+    const { width: W, height: H } = this.camera;
+    const half = WIPE_SECONDS / 2;
+    const p = this.wipe.t < half ? this.wipe.t / half : 1 - (this.wipe.t - half) / half;
+    const rows = Math.round(Math.max(0, Math.min(1, p)) * H);
+    for (let y = 0; y < rows; y++) {
+      // Every other line goes dark first, then the rest: a scanline look, not a fade.
+      if (y % 2 === 1 && p < 0.85) continue;
+      this.pixels.fill(WIPE, y * W, (y + 1) * W);
+    }
+    if (this.wipe.t >= WIPE_SECONDS) this.wipe = null;
   }
 
   /** The lensing pass, when a black hole exists (it switches itself off when far away). */

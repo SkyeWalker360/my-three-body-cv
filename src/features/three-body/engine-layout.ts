@@ -58,6 +58,20 @@ export const BODY = {
 } as const;
 export const BODY_KINDS = ['star', 'planet', 'fragment'] as const;
 
+/** The effects buffer: [count, then rows]. Radii are in AU, as the engine draws them. */
+export const EFFECT = {
+  kind: 0,
+  x: 1,
+  y: 2,
+  radius: 3,
+  strength: 4,
+  width: 5,
+  rows: 13,
+  shell: 1,
+  shock: 2,
+  flash: 3,
+} as const;
+
 export const EVENT = {
   collision: 1,
   supernova: 2,

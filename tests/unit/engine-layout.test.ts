@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   BODY,
+  EFFECT,
   ENGINE_PALETTE,
   EVENT,
   MAX_PIXELS,
@@ -68,6 +69,24 @@ describe('engine layout mirror', () => {
     };
     for (const [key, go] of Object.entries(map)) {
       expect(BODY[key as keyof typeof BODY], key).toBe(goConst(state, go));
+    }
+  });
+
+  it('uses the Go effects layout', () => {
+    const map: Record<string, string> = {
+      kind: 'EffectKind',
+      x: 'EffectX',
+      y: 'EffectY',
+      radius: 'EffectRadius',
+      strength: 'EffectStrength',
+      width: 'EffectWidth',
+      rows: 'EffectsRows',
+      shell: 'EffectShell',
+      shock: 'EffectShock',
+      flash: 'EffectFlash',
+    };
+    for (const [key, go] of Object.entries(map)) {
+      expect(EFFECT[key as keyof typeof EFFECT], key).toBe(goConst(state, go));
     }
   });
 
