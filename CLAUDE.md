@@ -34,7 +34,8 @@ is the visual reference only: never import from it.
   `readRamp()` from `src/lib/palette.ts`. Don't lighten or darken a colour by mixing in white or
   black, and don't interpolate between steps: pick a step, and dither between neighbouring
   steps with `bayer8()` from `src/lib/dither.ts`. Ramp steps are for art; text uses the
-  contrast-checked base tokens.
+  contrast-checked base tokens. Stars take their colour from the stellar ramp
+  (`--color-star-{0..5}`, cool → hot), snapped from their temperature.
 - **Changing a ramp** means editing `globals.css`, then `pnpm palette` to regenerate
   `design/three-body-cv.gpl` (Luke's Aseprite palette). A unit test fails if they drift.
 - **Sprites** are drawn by Luke in Aseprite with that palette, exported as PNG to
