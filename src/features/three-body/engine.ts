@@ -33,6 +33,7 @@ type Exports = {
   statePtr(): number;
   framePtr(): number;
   eventsPtr(): number;
+  bodiesPtr(): number;
   frameWidth(): number;
   frameHeight(): number;
 };

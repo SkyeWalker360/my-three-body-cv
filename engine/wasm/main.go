@@ -50,6 +50,9 @@ func statePtr() uint32 { return uint32(uintptr(unsafe.Pointer(&world.State[0])))
 //go:wasmexport framePtr
 func framePtr() uint32 { return uint32(uintptr(unsafe.Pointer(&world.Frame.Pix[0]))) }
 
+//go:wasmexport bodiesPtr
+func bodiesPtr() uint32 { return uint32(uintptr(unsafe.Pointer(&world.Bodies[0]))) }
+
 //go:wasmexport eventsPtr
 func eventsPtr() uint32 { return uint32(uintptr(unsafe.Pointer(&world.Events[0]))) }
 

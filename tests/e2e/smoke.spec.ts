@@ -239,3 +239,29 @@ test('NDT inspection mode shows static outlines with reduced motion', async ({ p
     'true',
   );
 });
+
+test('the observation deck opens on the calm vantage, reads out in the DOM, and closes on Escape', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const opener = page.getByRole('button', { name: 'ENTER THE OBSERVATION DECK' });
+  await opener.click();
+  const dialog = page.getByRole('dialog', { name: 'OBSERVATION DECK' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('VANTAGE Above the orbital plane')).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(dialog.getByText(/COMPACT SCALE/)).toBeVisible();
+  await expect(dialog.getByText(/NEAREST TO CENTRE Star/)).toBeVisible();
+  await expect(dialog.locator('canvas')).toHaveAttribute('aria-hidden', 'true');
+  // Zoom is honest about the field of view.
+  await dialog.getByRole('button', { name: 'ZOOM +' }).click();
+  await expect(dialog.getByText(/ZOOM 1\.5× \(FOV 67°\)/)).toBeVisible();
+  await dialog.getByRole('button', { name: /Barycentre/ }).click();
+  await expect(dialog.getByText('VANTAGE Barycentre')).toBeVisible();
+  const axe = await new AxeBuilder({ page }).include('dialog').analyze();
+  expect(axe.violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+});

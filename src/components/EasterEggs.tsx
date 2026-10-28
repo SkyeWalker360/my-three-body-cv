@@ -12,6 +12,7 @@ const ShipCursor = dynamic(() => import('@/features/cursor/ShipCursor'), { ssr: 
 const Terminal = dynamic(() => import('@/features/karl/Terminal'), { ssr: false });
 const ShooterOverlay = dynamic(() => import('@/features/shooter/Overlay'), { ssr: false });
 const Scanner = dynamic(() => import('@/features/field-scanner/Scanner'), { ssr: false });
+const Deck = dynamic(() => import('@/features/three-body/deck/Deck'), { ssr: false });
 const Inspection = dynamic(() => import('@/features/inspection/Inspection'), { ssr: false });
 
 /** True while the user is typing, so M only toggles inspection mode outside text fields. */
@@ -29,6 +30,7 @@ export default function EasterEggs() {
   const [shooter, setShooter] = useState(false);
   const [scanner, setScanner] = useState(false);
   const [inspection, setInspection] = useState(false);
+  const [deck, setDeck] = useState(false);
 
   useEffect(() => {
     const load = () => {
@@ -48,6 +50,7 @@ export default function EasterEggs() {
     const offShooter = on('shooter:launch', () => setShooter(true));
     const offScanner = on('scanner:open', () => setScanner(true));
     const offInspection = on('inspection:toggle', () => setInspection(true));
+    const offDeck = on('deck:open', () => setDeck(true));
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'm' && e.key !== 'M') return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || isTyping(e.target)) return;
@@ -61,6 +64,7 @@ export default function EasterEggs() {
       offShooter();
       offScanner();
       offInspection();
+      offDeck();
       window.removeEventListener('keydown', onKey);
     };
   }, []);
@@ -73,6 +77,7 @@ export default function EasterEggs() {
       {shooter && <ShooterOverlay autoStart />}
       {scanner && <Scanner />}
       {inspection && <Inspection />}
+      {deck && <Deck />}
     </>
   );
 }

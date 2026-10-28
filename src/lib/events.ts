@@ -51,6 +51,10 @@ export type EventMap = {
   'threebody:ready': { presets: PresetSummary[]; engine: 'wasm' | 'typescript' };
   'threebody:age': undefined;
   'threebody:event': { kind: LabEventKind; message: string };
+  /** The observation deck: a request to open it, then its own opened/closed notices. */
+  'deck:open': undefined;
+  'deck:opened': undefined;
+  'deck:closed': undefined;
   /** M or the footer button; the first one mounts inspection mode, which then listens itself. */
   'inspection:toggle': undefined;
   'inspection:mode': { on: boolean };

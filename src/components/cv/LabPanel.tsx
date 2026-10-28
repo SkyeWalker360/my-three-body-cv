@@ -1,6 +1,6 @@
 import { PRESETS } from '@/features/three-body/presets';
 import { G, SOFTENING } from '@/features/three-body/solver';
-import { LabControls } from './controls';
+import { DeckButton, LabControls } from './controls';
 
 export function LabPanel() {
   return (
@@ -31,6 +31,11 @@ export function LabPanel() {
         blue-white giant ends in a supernova and a black hole, and the planet&apos;s climate follows
         the light it receives.
       </p>
+      <p className="max-w-3xl text-sm leading-relaxed">
+        Or step inside: the observation deck puts you on a platform in the system and shows each
+        star at its true distance, brightness and colour, with your eyes adjusting to the glare.
+      </p>
+      <DeckButton />
       <LabControls presets={PRESETS.map((p) => ({ name: p.name, short: p.short }))} />
     </section>
   );

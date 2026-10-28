@@ -191,6 +191,8 @@ export default function ShipCursor() {
       on('karl:closed', () => suspend(false)),
       on('shooter:start', () => suspend(true)),
       on('shooter:end', () => suspend(false)),
+      on('deck:opened', () => suspend(true)),
+      on('deck:closed', () => suspend(false)),
       on('inspection:mode', ({ on: value }) => {
         probe = value;
       }),

@@ -48,6 +48,19 @@ export function ScannerButton({
   );
 }
 
+export function DeckButton() {
+  return (
+    <button
+      type="button"
+      className="btn btn-violet"
+      aria-haspopup="dialog"
+      onClick={() => emit('deck:open')}
+    >
+      ENTER THE OBSERVATION DECK
+    </button>
+  );
+}
+
 export function InspectionToggle() {
   const [active, setActive] = useState(false);
   useEffect(() => on('inspection:mode', ({ on: value }) => setActive(value)), []);

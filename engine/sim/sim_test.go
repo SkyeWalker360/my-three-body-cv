@@ -156,3 +156,23 @@ func BenchmarkFrame(b *testing.B) {
 		w.Render()
 	}
 }
+
+func TestBodiesBufferMirrorsTheSystem(t *testing.T) {
+	w := run(318, 0, 120)
+	n := int(w.State[StateBodies])
+	if n != w.Sys.N || n < 3 {
+		t.Fatalf("body count %d, system has %d", n, w.Sys.N)
+	}
+	for i := 0; i < n; i++ {
+		row := w.Bodies[i*BodyWidth:]
+		if row[BodyX] != w.Sys.X[i] || row[BodyY] != w.Sys.Y[i] || row[BodyMass] != w.Sys.M[i] {
+			t.Fatalf("row %d doesn't match body %d", i, i)
+		}
+	}
+	for i := 0; i < 3; i++ {
+		row := w.Bodies[i*BodyWidth:]
+		if row[BodyKind] != 0 || row[BodyExtra] != w.Stars[i].Luminance() {
+			t.Fatalf("row %d should be star %d with its luminosity", i, i)
+		}
+	}
+}
