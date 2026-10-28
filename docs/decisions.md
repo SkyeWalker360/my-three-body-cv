@@ -172,3 +172,7 @@ mode was built without adding or changing any CV text.
   first indication on screen takes focus so Tab walks through them.
 - **Cost.** The feature is its own lazy chunk (about 7 KB gzipped, including the manifest copy),
   loaded on the first toggle. Cards gained `relative` so the overlay can anchor to them.
+- **Visibility (follow-up).** The first version was too subtle to notice: cracks are now two
+  rows thick with a dithered `gold-1` bloom up to 3 px outside the band (away from the text),
+  and a toast ("INSPECTING · N FOUND · M TO EXIT") shows for 3 s when the mode comes on, then
+  hides so it never sits over CV text.

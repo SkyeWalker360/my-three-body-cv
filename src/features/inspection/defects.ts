@@ -25,6 +25,8 @@ export type Defect = {
   core: Cell[];
   /** Band cells next to the crack that glow dimmer. */
   glow: Cell[];
+  /** A dithered bloom just outside the band, away from the card, so the crack reads at a glance. */
+  bloom: Cell[];
   /** The stretch of band the crack runs along (the static outline with reduced motion). */
   band: Box;
   /** The clickable indication. */
@@ -98,22 +100,28 @@ export function defects(seed: number, w: number, h: number, count: number): Defe
     );
     const u0 = Math.round(length * 0.1 + random() * (length * 0.9 - len - length * 0.1));
 
-    // The crack wanders across the band one row at a time.
-    let row = 1 + Math.floor(random() * 2);
+    // The crack is two rows thick and wanders across the band one row at a time.
+    let row = Math.floor(random() * (BAND - 1));
     const core: Cell[] = [];
     const glow: Cell[] = [];
+    const bloom: Cell[] = [];
     for (let u = u0; u < u0 + len; u++) {
-      if (random() < 0.35) row = Math.min(BAND - 1, Math.max(0, row + (random() < 0.5 ? -1 : 1)));
-      core.push(place(edge, u, row, w, h));
-      for (const v of [row - 1, row + 1]) {
-        if (v >= 0 && v < BAND) glow.push(place(edge, u, v, w, h));
+      if (random() < 0.35) row = Math.min(BAND - 2, Math.max(0, row + (random() < 0.5 ? -1 : 1)));
+      core.push(place(edge, u, row, w, h), place(edge, u, row + 1, w, h));
+      for (let v = 0; v < BAND; v++) {
+        if (v !== row && v !== row + 1) glow.push(place(edge, u, v, w, h));
       }
+      // Outward bloom (v < 0 is outside the band): solid, then a checkerboard, then sparse.
+      bloom.push(place(edge, u, -1, w, h));
+      if (u % 2 === 0) bloom.push(place(edge, u, -2, w, h));
+      if (u % 4 === 1) bloom.push(place(edge, u, -3, w, h));
     }
     const coreKeys = new Set(core.map(([x, y]) => `${x},${y}`));
     return {
       edge,
       core,
       glow: glow.filter(([x, y]) => !coreKeys.has(`${x},${y}`)),
+      bloom,
       band: edgeBox(edge, u0, len, BAND, w, h),
       hit: edgeBox(edge, u0, len, HIT, w, h),
     };

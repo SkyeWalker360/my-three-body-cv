@@ -74,6 +74,8 @@ export default function Inspection() {
   const dialog = useRef<HTMLDialogElement>(null);
   const particleRefs = useRef<Map<string, SVGRectElement[]>>(new Map());
   const shooting = useRef(false);
+  // A short toast confirms the mode came on, then gets out of the way of the CV text.
+  const [toast, setToast] = useState(false);
 
   useEffect(() => watchReducedMotion(setReduced), []);
 
@@ -157,6 +159,17 @@ export default function Inspection() {
     return () => loop.dispose();
   }, [animate, settled, layout]);
 
+  useEffect(() => {
+    if (!active) return;
+    const show = setTimeout(() => setToast(true), 0);
+    const hide = setTimeout(() => setToast(false), 3000);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+      setToast(false);
+    };
+  }, [active]);
+
   // Escape switches the mode off when no write-up is open.
   useEffect(() => {
     if (!active) return;
@@ -208,6 +221,15 @@ export default function Inspection() {
           : 'Inspection mode off.'}
       </p>
 
+      {toast && (
+        <p
+          aria-hidden="true"
+          className="pixel-border pointer-events-none fixed bottom-6 left-1/2 z-30 -translate-x-1/2 bg-gold px-4 py-3 font-pixel text-xs whitespace-nowrap text-void [--pixel-border:var(--color-gold)]"
+        >
+          INSPECTING · {total} FOUND · M TO EXIT
+        </p>
+      )}
+
       {active &&
         layout.map(({ target, size, found, particles }) => {
           if (!size || found.length === 0) return null;
@@ -245,7 +267,12 @@ export default function Inspection() {
                         strokeDasharray="2 2"
                       />
                     ) : (
-                      !drifting && <path d={cellsPath(d.glow)} fill="var(--color-gold-1)" />
+                      !drifting && (
+                        <>
+                          <path d={cellsPath(d.bloom)} fill="var(--color-gold-1)" />
+                          <path d={cellsPath(d.glow)} fill="var(--color-gold-2)" />
+                        </>
+                      )
                     )}
                     {!drifting && (
                       <path
