@@ -62,6 +62,20 @@ describe('inspection defects', () => {
     }
   });
 
+  it('blooms only outward, within 3 px beyond the band', () => {
+    for (const [w, h] of sizes) {
+      for (const d of defects(hashString('ctu'), w, h, 3)) {
+        expect(d.bloom.length).toBeGreaterThan(0);
+        for (const [x, y] of d.bloom) {
+          expect(x < -BAND || y < -BAND || x >= w + BAND || y >= h + BAND).toBe(true);
+          expect(x >= -BAND - 3 && x < w + BAND + 3 && y >= -BAND - 3 && y < h + BAND + 3).toBe(
+            true,
+          );
+        }
+      }
+    }
+  });
+
   it('keeps hit targets 24 px thick and out of the padding where text lives', () => {
     for (const [w, h] of sizes) {
       for (const d of defects(hashString('gen318'), w, h, 3)) {
